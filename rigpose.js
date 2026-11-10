@@ -20,13 +20,19 @@ function makeRig(model,opts){
   const rest={};for(const k in b)rest[k]=b[k].quaternion.clone();
   // rest direction of each aim bone = direction to its child, in the bone's parent space
   const restDir={};for(const [bone,key,child] of AIM){restDir[bone]=b[child].position.clone().normalize().applyQuaternion(rest[bone])}
-  const rig={model,b,rest,restDir,bladeOffset:opts.bladeOffset||0.0};
+  const rig={model,b,rest,restDir,bladeOffset:opts.bladeOffset||0.0,eulerScale:Object.assign({hips:1,torso:1,head:1},opts.eulerScale||{})};
+  if(opts.autoBlade){ // blade offset = how far the mesh's lowest point sits below the lowest foot bone, at rest
+    model.updateMatrixWorld(true);const box=new THREE.Box3();model.traverse(o=>{if(o.isSkinnedMesh){o.geometry.computeBoundingBox();const bb=o.geometry.boundingBox.clone();bb.applyMatrix4(o.matrixWorld);box.union(bb)}});
+    let minY=Infinity;for(const n of FEET){const B=b[n];if(!B)continue;B.getWorldPosition(_p);if(model.parent)model.parent.worldToLocal(_p);if(_p.y<minY)minY=_p.y}
+    const bmin=new V3(box.min.x,box.min.y,box.min.z);if(model.parent)model.parent.worldToLocal(bmin);
+    if(isFinite(minY)&&isFinite(bmin.y))rig.bladeOffset=minY-bmin.y;
+  }
   return rig;
 }
 function nrm(d){return _v.set(d[0],d[1],d[2]).normalize()}
 function applyPose(rig,p,air){
   const {b,rest,model}=rig;
-  for(const [bone,key,f] of EUL){const e=p[key]||[0,0,0];_e.set(e[0]*f,e[1]*f,e[2]*f,'YXZ');b[bone].quaternion.copy(rest[bone]).multiply(_q.setFromEuler(_e))}
+  for(const [bone,key,f] of EUL){const e=p[key]||[0,0,0];const es=rig.eulerScale[key]||1;_e.set(e[0]*f*es,e[1]*f*es,e[2]*f*es,'YXZ');b[bone].quaternion.copy(rest[bone]).multiply(_q.setFromEuler(_e))}
   model.position.y=0;
   model.updateMatrixWorld(true);
   const qRoot=model.getWorldQuaternion(new QT());

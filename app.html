@@ -663,17 +663,21 @@ function updateTrace(t){const n=Math.max(2,Math.floor(TL.samples.length*t/state.
 
 /* ---------- Skaters ---------- */
 const skaters=[];// {root,lean,spin,model,rig,shadow,who}
-function makeSkater(gltfScene,who,colors){
+function makeSkater(gltfScene,who,colors,kind){
   const root=new THREE.Group();scene.add(root);
   const lean=new THREE.Group();root.add(lean);
   const spin=new THREE.Group();lean.add(spin);
-  const model=gltfScene;spin.add(model);const sc=who==='A'?.95:1.03;model.scale.setScalar(sc);
+  const model=gltfScene;spin.add(model);
+  const mannequin=kind==='mannequin';
+  // scale to a real height: measure the model, target 1.65 m (skater) / 1.80 m (partner)
+  model.updateMatrixWorld(true);const bb=new THREE.Box3().setFromObject(model);const h=Math.max(.1,bb.max.y-bb.min.y);const sc=(who==='A'?1.65:1.80)/h;model.scale.setScalar(sc);
   model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=false;o.frustumCulled=false;
-    if(/Joints/.test(o.material.name))o.material=new THREE.MeshStandardMaterial({color:colors.joint,metalness:.8,roughness:.28,skinning:true,envMapIntensity:1.0});
-    else o.material=new THREE.MeshStandardMaterial({color:colors.body,metalness:.15,roughness:.5,skinning:true,envMapIntensity:.45})}});
-  const rig=R.makeRig(model,{bladeOffset:.015});
-  // boots + blades on each foot
-  for(const side of ['Left','Right']){const foot=rig.b[side+'Foot'],toe=rig.b[side+'ToeBase'];if(!foot||!toe)continue;
+    if(mannequin){if(/Joints/.test(o.material.name))o.material=new THREE.MeshStandardMaterial({color:colors.joint,metalness:.8,roughness:.28,skinning:true,envMapIntensity:1.0});
+      else o.material=new THREE.MeshStandardMaterial({color:colors.body,metalness:.15,roughness:.5,skinning:true,envMapIntensity:.45})}
+    else {o.material.skinning=true;o.material.envMapIntensity=.5;o.material.needsUpdate=true}}});
+  const rig=mannequin?R.makeRig(model,{bladeOffset:.015}):R.makeRig(model,{autoBlade:true,eulerScale:{torso:.78,head:.6,hips:.9}});
+  // boots + blades on each foot (the mannequin only; the skater model has her own skates)
+  for(const side of (mannequin?['Left','Right']:[])){const foot=rig.b[side+'Foot'],toe=rig.b[side+'ToeBase'];if(!foot||!toe)continue;
     model.updateMatrixWorld(true);const a=new THREE.Vector3(),b=new THREE.Vector3();foot.getWorldPosition(a);toe.getWorldPosition(b);
     const g=new THREE.Group();const mid=a.clone().lerp(b,.5);g.position.copy(mid);g.position.y=Math.min(a.y,b.y)+.065*sc;g.lookAt(mid.x+(b.x-a.x),g.position.y,mid.z+(b.z-a.z));
     const boot=new THREE.Mesh(new THREE.BoxGeometry(.085*sc,.15*sc,.27*sc),new THREE.MeshStandardMaterial({color:colors.boot,roughness:.5}));boot.castShadow=true;boot.position.set(0,0,.01);g.add(boot);
@@ -687,9 +691,9 @@ function makeSkater(gltfScene,who,colors){
 function loadSkaters(){
   const loader=new THREE.GLTFLoader();
   const fail=()=>{document.getElementById('loading').textContent='Could not load the skater model.'};
-  const load=cb=>{if(window.SKATER_GLB_B64){const bin=atob(window.SKATER_GLB_B64);const buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);loader.parse(buf.buffer,'',cb,fail)}else loader.load('models/skater.glb',cb,undefined,fail)};
-  load(g=>{makeSkater(g.scene,'A',{body:0x1b2a4a,joint:0xc9962b,boot:0xf3efe8});
-    load(g2=>{const B=makeSkater(g2.scene,'B',{body:0x2a2f3a,joint:0xc9962b,boot:0x111214});B.root.visible=false;state.ready=true;document.getElementById('loading').hidden=true})});
+  const load=(name,cb)=>{const b64=window[name.toUpperCase()+'_GLB_B64'];if(b64){const bin=atob(b64);const buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);loader.parse(buf.buffer,'',cb,fail)}else loader.load('models/'+name+'.glb',cb,undefined,fail)};
+  load('skater',g=>{makeSkater(g.scene,'A',{},'skater');
+    load('partner',g2=>{const B=makeSkater(g2.scene,'B',{body:0x2a2f3a,joint:0xc9962b,boot:0x111214},'mannequin');B.root.visible=false;state.ready=true;document.getElementById('loading').hidden=true})});
 }
 loadSkaters();
 
