@@ -686,11 +686,10 @@ function makeSkater(gltfScene,who,colors){
 }
 function loadSkaters(){
   const loader=new THREE.GLTFLoader();
-  loader.load('models/skater.glb',g=>{
-    makeSkater(g.scene,'A',{body:0x1b2a4a,joint:0xc9962b,boot:0xf3efe8});
-    // partner: load a second copy
-    loader.load('models/skater.glb',g2=>{const B=makeSkater(g2.scene,'B',{body:0x2a2f3a,joint:0xc9962b,boot:0x111214});B.root.visible=false;state.ready=true;document.getElementById('loading').hidden=true});
-  },undefined,err=>{document.getElementById('loading').textContent='Could not load the skater model.'});
+  const fail=()=>{document.getElementById('loading').textContent='Could not load the skater model.'};
+  const load=cb=>{if(window.SKATER_GLB_B64){const bin=atob(window.SKATER_GLB_B64);const buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);loader.parse(buf.buffer,'',cb,fail)}else loader.load('models/skater.glb',cb,undefined,fail)};
+  load(g=>{makeSkater(g.scene,'A',{body:0x1b2a4a,joint:0xc9962b,boot:0xf3efe8});
+    load(g2=>{const B=makeSkater(g2.scene,'B',{body:0x2a2f3a,joint:0xc9962b,boot:0x111214});B.root.visible=false;state.ready=true;document.getElementById('loading').hidden=true})});
 }
 loadSkaters();
 
