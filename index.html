@@ -752,7 +752,7 @@ function loadSkaters(){
   const fail=()=>{document.getElementById('loading').textContent='Could not load the skater model.'};
   const load=(name,cb)=>{const b64=window[name.toUpperCase()+'_GLB_B64'];if(b64){const bin=atob(b64);const buf=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)buf[i]=bin.charCodeAt(i);loader.parse(buf.buffer,'',cb,fail)}else loader.load('models/'+name+'.glb',cb,undefined,fail)};
   load('skater',g=>{makeSkater(g.scene,'A',{},'skater');
-    load('partner',g2=>{const B=makeSkater(g2.scene,'B',{body:0x2a2f3a,joint:0xc9962b,boot:0x111214},'mannequin');B.root.visible=false;state.ready=true;document.getElementById('loading').hidden=true})});
+    load('partner',g2=>{const B=makeSkater(g2.scene,'B',{},'skater');B.root.visible=false;state.ready=true;document.getElementById('loading').hidden=true})});
 }
 loadSkaters();
 
