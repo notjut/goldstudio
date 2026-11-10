@@ -1,0 +1,1049 @@
+<title>Gold Studio</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: arena-side console. 3D rink on top, transport strip, then tabbed program sheet. Corporate-athletic: navy blue field, condensed uppercase wordmark in chrome gold. */
+:root{
+  --bg:#0a1e3d; --panel:#102a52; --panel-2:#163566; --line:#27497e; --fg:#eef3fb; --muted:#9db1d1;
+  --accent:#e2b24b; --accent-ink:#1c1304; --ice:#bfd9ee; --ok:#5ed29a; --warn:#e8bb55; --bad:#f07373;
+  --bg-top:#153a72; --bg-bottom:#040d1e; --glow-top:rgba(93,156,255,.42); --glow-side:rgba(226,178,75,.14); --grid:rgba(120,170,255,.13); --edge:rgba(255,255,255,.07);
+  --display:"Barlow Condensed","Arial Narrow",Impact,system-ui,sans-serif;
+  --body:"Barlow",system-ui,-apple-system,"Segoe UI",sans-serif;
+  color-scheme:dark;
+}
+@media (prefers-color-scheme: light){ :root:not([data-theme="dark"]){
+  --bg:#d9e6f5; --panel:#ffffff; --panel-2:#eaf1fa; --line:#b9cce4; --fg:#0b1f3d; --muted:#4f6688;
+  --accent:#a8780e; --accent-ink:#fff8e8; --ice:#5a84a8; --ok:#1f8a52; --warn:#9a6a12; --bad:#b83a3a; --bg-top:#f3f8ff; --bg-bottom:#b9cfe9; --glow-top:rgba(255,255,255,.9); --glow-side:rgba(168,120,14,.12); --grid:rgba(35,80,150,.12); --edge:rgba(255,255,255,.9); color-scheme:light; } }
+:root[data-theme="light"]{
+  --bg:#d9e6f5; --panel:#ffffff; --panel-2:#eaf1fa; --line:#b9cce4; --fg:#0b1f3d; --muted:#4f6688;
+  --accent:#a8780e; --accent-ink:#fff8e8; --ice:#5a84a8; --ok:#1f8a52; --warn:#9a6a12; --bad:#b83a3a; --bg-top:#f3f8ff; --bg-bottom:#b9cfe9; --glow-top:rgba(255,255,255,.9); --glow-side:rgba(168,120,14,.12); --grid:rgba(35,80,150,.12); --edge:rgba(255,255,255,.9); color-scheme:light; }
+
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font-family:var(--body);font-size:14px;line-height:1.45;position:relative;min-height:100%;isolation:isolate}
+body::before{content:"";position:fixed;inset:0;z-index:-2;pointer-events:none;
+  background:
+    radial-gradient(ellipse 70% 45% at 50% -8%, var(--glow-top) 0%, transparent 70%),
+    radial-gradient(ellipse 60% 50% at 15% 110%, var(--glow-side) 0%, transparent 65%),
+    radial-gradient(ellipse 60% 50% at 90% 100%, var(--glow-side) 0%, transparent 65%),
+    linear-gradient(180deg, var(--bg-top) 0%, var(--bg) 45%, var(--bg-bottom) 100%)}
+body::after{content:"";position:fixed;left:-30%;right:-30%;top:36%;bottom:-20%;z-index:-1;pointer-events:none;transform:perspective(900px) rotateX(64deg);transform-origin:50% 0;
+  background:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px) 0 0/64px 64px,
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px) 0 0/64px 64px;
+  -webkit-mask-image:linear-gradient(180deg,transparent 0%,#000 35%,#000 70%,transparent 100%);mask-image:linear-gradient(180deg,transparent 0%,#000 35%,#000 70%,transparent 100%)}
+.stage,.transport,.panel,.map,.musicbox{box-shadow:0 1px 0 var(--edge) inset,0 18px 40px -22px rgba(0,0,0,.65),0 2px 6px rgba(0,0,0,.25)}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:14px 32px;max-width:1280px;margin:0 auto;display:grid;gap:14px}
+header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:10px 18px}
+.brand{display:flex;flex-direction:column;gap:2px}
+h1{font-family:var(--display);font-weight:800;font-size:40px;margin:0;letter-spacing:.04em;text-transform:uppercase;line-height:.95;text-wrap:balance;display:flex;gap:10px;align-items:baseline}
+h1 em{font-style:normal;background:linear-gradient(180deg,#fff2c4 0%,#f3d27a 28%,#b8862a 52%,#f6dc8e 70%,#9a6c16 100%);-webkit-background-clip:text;background-clip:text;color:transparent;-webkit-text-fill-color:transparent;filter:drop-shadow(0 1px 0 rgba(0,0,0,.35))}
+h1 span{color:var(--fg);font-weight:700;letter-spacing:.08em}
+.sub{color:var(--muted);font-size:13px}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.setup{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel-2)}
+.seg button{background:none;border:0;color:var(--muted);font:700 13px var(--body);letter-spacing:.06em;text-transform:uppercase;padding:9px 14px;cursor:pointer}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+
+/* viewport */
+.stage{position:relative;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden;height:min(58vh,580px);min-height:300px}
+.stage canvas{display:block;width:100%;height:100%;touch-action:none}
+.stage::after{content:"";position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 85% 80% at 50% 45%,transparent 55%,rgba(2,10,28,.5) 100%)}
+.hud{position:absolute;left:12px;top:12px;pointer-events:none;display:grid;gap:4px;z-index:2}
+.hud .el{font-family:var(--display);font-size:34px;line-height:1;font-weight:800;letter-spacing:.03em;text-transform:uppercase;color:#fff;text-shadow:0 1px 8px rgba(0,0,0,.55)}
+.hud .desc{font-size:12px;color:#fff;opacity:.9;text-shadow:0 1px 6px rgba(0,0,0,.6);max-width:46ch}
+.hud .pill{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:2px 8px;width:max-content}
+.hud .pill.replay{background:#f07373;color:#fff}
+.cams{position:absolute;right:10px;top:10px;display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;z-index:2}
+.chip{border:1px solid rgba(255,255,255,.3);background:rgba(10,14,20,.55);color:#fff;border-radius:999px;padding:5px 10px;font:600 12px var(--body);cursor:pointer;backdrop-filter:blur(6px)}
+.chip[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.clock{position:absolute;right:12px;bottom:10px;font:600 13px var(--body);color:#fff;text-shadow:0 1px 6px rgba(0,0,0,.6);font-variant-numeric:tabular-nums;z-index:2}
+.hint{position:absolute;left:12px;bottom:10px;font-size:11px;color:#fff;opacity:.7;text-shadow:0 1px 6px rgba(0,0,0,.6);z-index:2}
+.loading{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font:700 14px var(--body);letter-spacing:.1em;text-transform:uppercase;background:rgba(5,14,32,.6);z-index:3}
+
+/* transport */
+.transport{background:linear-gradient(180deg,var(--panel-2) 0%,var(--panel) 30%);border:1px solid var(--line);border-radius:10px;padding:10px 12px;display:grid;gap:8px}
+.trow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+button,select,input[type="text"],input[type="number"]{font:inherit;color:var(--fg)}
+.btn{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 12px;cursor:pointer;font-weight:600}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.icon{width:40px;height:36px;padding:0;display:grid;place-items:center;font-size:16px}
+.btn:focus-visible,select:focus-visible,input:focus-visible,.chip:focus-visible,.tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.time{font-variant-numeric:tabular-nums;font-weight:700;min-width:96px}
+.spacer{flex:1}
+.scrub{position:relative;height:84px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line);overflow:hidden;touch-action:none}
+.scrub canvas{display:block;width:100%;height:100%}
+.muted{color:var(--muted)}
+.toggle{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--muted);cursor:pointer}
+.toggle input{accent-color:var(--accent)}
+
+/* tabs */
+.tabs{display:flex;gap:4px;border-bottom:1px solid var(--line);overflow-x:auto}
+.tab{background:none;border:0;border-bottom:2px solid transparent;padding:8px 12px;cursor:pointer;color:var(--muted);font-weight:600;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.panel{background:linear-gradient(180deg,var(--panel-2) 0%,var(--panel) 18%);border:1px solid var(--line);border-radius:10px;padding:14px;display:grid;gap:14px}
+.field{display:grid;gap:4px}
+.field label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+select,input[type="text"],input[type="number"]{background:var(--panel-2);border:1px solid var(--line);border-radius:8px;padding:7px 9px;width:100%;min-width:0}
+table{width:100%;border-collapse:collapse}
+th{text-align:left;font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:4px 6px;border-bottom:1px solid var(--line)}
+td{padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+tr.active td{background:color-mix(in srgb,var(--accent) 12%,transparent)}
+td.num{font-variant-numeric:tabular-nums;color:var(--muted);width:30px}
+.code{font-weight:700;font-family:var(--body)}
+.kind{font-size:11px;color:var(--muted)}
+.extra td .code{color:var(--accent)}
+.tw{overflow-x:auto}
+.tbtn{background:none;border:0;cursor:pointer;color:var(--muted);font-size:16px;padding:4px 6px}
+.tbtn:hover{color:var(--bad)}
+.bonus{font-size:10px;font-weight:800;letter-spacing:.06em;color:var(--accent-ink);background:var(--accent);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:middle}
+.bv{font-variant-numeric:tabular-nums;font-weight:700}
+.actions{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.stat{display:grid;gap:2px;padding:8px 12px;border:1px solid var(--line);border-radius:8px;background:var(--panel-2)}
+.stat b{font-family:var(--display);font-size:26px;line-height:1;font-weight:800}
+.stat span{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);font-weight:700}
+.stats{display:flex;gap:8px;flex-wrap:wrap}
+
+/* music */
+.musicbox{border:1px solid var(--line);border-radius:10px;background:var(--panel-2);padding:14px;display:grid;gap:12px}
+.drop{border:2px dashed var(--line);border-radius:10px;padding:22px 16px;text-align:center;display:grid;gap:6px;cursor:pointer;position:relative;overflow:hidden}
+.drop.over{border-color:var(--accent);background:color-mix(in srgb,var(--accent) 10%,transparent)}
+.drop input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.drop b{font-family:var(--display);font-size:22px;letter-spacing:.04em;text-transform:uppercase}
+.mrow{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;align-items:end}
+input[type="range"]{width:100%;accent-color:var(--accent)}
+.mono{font-variant-numeric:tabular-nums}
+
+/* rink map */
+.map{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+.map svg{display:block;width:100%;height:auto;touch-action:none}
+.marker{cursor:grab}
+
+/* rules */
+.rules{display:grid;gap:6px}
+.rule{display:flex;gap:10px;align-items:flex-start;padding:8px 10px;border-radius:8px;background:var(--panel-2);border:1px solid var(--line)}
+.rule .dot{width:10px;height:10px;border-radius:50%;margin-top:5px;flex:none}
+.rule.ok .dot{background:var(--ok)} .rule.bad .dot{background:var(--bad)} .rule.warn .dot{background:var(--warn)}
+.rule b{display:block}
+.rule span{color:var(--muted);font-size:12.5px}
+.foot{font-size:12px;color:var(--muted);max-width:72ch}
+
+@media (max-width:640px){
+  h1{font-size:32px}
+  .stage{height:46vh}
+  .hud .el{font-size:26px}
+  th:nth-child(5),td:nth-child(5){display:none}
+}
+@media (prefers-reduced-motion: reduce){ *{transition:none!important} }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <h1><em>Gold</em><span>Studio</span></h1>
+      <div class="sub" id="progName">Senior Women · Short Program · 2:40</div>
+    </div>
+    <div class="setup">
+      <div class="seg" role="group" aria-label="Segment">
+        <button id="segSP" aria-pressed="true">Short Program</button>
+        <button id="segFS" aria-pressed="false">Free Program</button>
+      </div>
+      <select id="disc" aria-label="Discipline" style="width:auto"><option value="W">Women</option><option value="M">Men</option><option value="P">Pairs</option></select>
+      <select id="level" aria-label="Level" style="width:auto"><option value="senior">Senior</option><option value="junior">Junior</option><option value="novice">Advanced Novice</option></select>
+    </div>
+  </header>
+
+  <section class="stage" id="stage" aria-label="3D rink">
+    <div class="hud">
+      <span class="pill" id="hudPhase">Opening</span>
+      <div class="el" id="hudEl">Opening pose</div>
+      <div class="desc" id="hudDesc">Hold at the start position until the music begins.</div>
+    </div>
+    <div class="cams" role="group" aria-label="Camera">
+      <button class="chip" data-cam="broadcast" aria-pressed="true">Broadcast</button>
+      <button class="chip" data-cam="judge" aria-pressed="false">Judges</button>
+      <button class="chip" data-cam="low" aria-pressed="false">Ice level</button>
+      <button class="chip" data-cam="overhead" aria-pressed="false">Overhead</button>
+      <button class="chip" data-cam="free" aria-pressed="false">Free</button>
+    </div>
+    <div class="hint" id="hint">Drag to orbit in Free camera · scroll or pinch to zoom</div>
+    <div class="clock" id="clock">0:00.0 / 2:40</div>
+    <div class="loading" id="loading">Loading skater</div>
+  </section>
+
+  <section class="transport">
+    <div class="trow">
+      <button class="btn icon primary" id="play" aria-label="Play">▶</button>
+      <button class="btn icon" id="stop" aria-label="Back to start">⏮</button>
+      <span class="time" id="tdisp">0:00.0</span>
+      <select id="rate" aria-label="Playback speed" style="width:auto">
+        <option value="1">1× speed</option><option value="0.5">½ slow motion</option><option value="0.25">¼ slow motion</option>
+      </select>
+      <label class="toggle"><input type="checkbox" id="autoReplay" checked> Slow-motion replay on jumps</label>
+      <button class="btn" id="rec" hidden>● Record video</button>
+      <span class="spacer"></span>
+      <span class="muted" id="musicName">No track yet. Timeline uses the program length.</span>
+    </div>
+    <div class="scrub" id="scrub"><canvas id="wave"></canvas></div>
+  </section>
+
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" aria-selected="true" data-tab="program">Program</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="music">Music</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="map">Rink map</button>
+    <button class="tab" role="tab" aria-selected="false" data-tab="rules">Rule check</button>
+  </div>
+
+  <section class="panel" id="tab-program">
+    <div class="stats">
+      <div class="stat"><b id="statBV">0.0</b><span>Base value</span></div>
+      <div class="stat"><b id="statEl">0</b><span>Elements</span></div>
+      <div class="stat"><b id="statLen">2:40</b><span>Length</span></div>
+    </div>
+    <div class="tw">
+      <table id="elTable">
+        <thead><tr><th>#</th><th>Time</th><th>Element</th><th>Reads as</th><th>BV</th><th>Ice</th><th></th></tr></thead>
+        <tbody id="elBody"></tbody>
+      </table>
+    </div>
+    <div class="actions">
+      <button class="btn" id="addEl">+ Add element</button>
+      <button class="btn" id="fill">Fill gaps with artistic moves</button>
+      <button class="btn" id="sample">Load sample program</button>
+      <label class="toggle"><input type="checkbox" id="snap"> Snap times to the beat</label>
+    </div>
+    <p class="foot" id="codeHelp"></p>
+    <datalist id="codes"></datalist>
+  </section>
+
+  <section class="panel" id="tab-music" hidden>
+    <div class="musicbox">
+      <div class="drop" id="drop">
+        <b>Drop the program music here</b>
+        <span class="muted">MP3, M4A, WAV or AAC. Tap to browse. The track is decoded in your browser; nothing is uploaded.</span>
+        <input type="file" id="music" accept="audio/*" aria-label="Upload music">
+      </div>
+      <div class="mrow">
+        <div class="field"><label>Track</label><div id="mTrack" class="mono">None</div></div>
+        <div class="field"><label>Tempo</label><div id="mBpm" class="mono">—</div></div>
+        <div class="field"><label>Program length</label><div id="mLen" class="mono">—</div></div>
+        <div class="field"><label>Length rule</label><div id="mRule" class="mono">—</div></div>
+      </div>
+      <div class="mrow">
+        <div class="field"><label for="trimStart">Program starts at <span id="trimStartV" class="mono">0:00.0</span></label><input type="range" id="trimStart" min="0" max="0" step="0.1" value="0"></div>
+        <div class="field"><label for="trimEnd">Program ends at <span id="trimEndV" class="mono">—</span></label><input type="range" id="trimEnd" min="0" max="0" step="0.1" value="0"></div>
+        <div class="field"><label for="vol">Volume</label><input type="range" id="vol" min="0" max="1" step="0.01" value="0.9"></div>
+      </div>
+      <p class="foot">Trim handles set where the program begins and ends inside the track; the element timeline counts from the start handle. Tempo is estimated from the track and drawn as beat ticks on the timeline so elements can be placed on the music.</p>
+    </div>
+  </section>
+
+  <section class="panel" id="tab-map" hidden>
+    <div class="eyebrow">Drag an element to place it on the ice · 60 × 30 m international rink</div>
+    <div class="map"><svg id="mapSvg" viewBox="-31.5 -16.5 63 33" aria-label="Rink map"></svg></div>
+    <p class="foot">The gold line is the skating path built between the elements: lobes and edges, with crossovers on the curves and a backward approach into every toe and edge jump. Judges sit along the bottom long side.</p>
+  </section>
+
+  <section class="panel" id="tab-rules" hidden>
+    <div class="eyebrow" id="rulesHead">Required elements</div>
+    <div class="rules" id="rules"></div>
+    <p class="foot">Checks follow the 2026/27 ISU requirements (Communication 2770): required jump types, spin positions and change-of-foot rules, step sequence, element count, program length, and the 1.1× factor for the last jumping pass in the second half. Base values use the current ISU Scale of Values at the level entered; levels and GOE are judged live and are not scored here.</p>
+  </section>
+</div>
+
+<script src="vendor/three.min.js"></script>
+<script src="vendor/GLTFLoader.js"></script>
+<script src="vendor/Reflector.js"></script>
+<script src="vendor/RoomEnvironment.js"></script>
+<script src="rigpose.js"></script>
+<script src="poses.js"></script>
+<script>
+(function(){
+'use strict';
+const TAU=Math.PI*2, clamp=(v,a,b)=>Math.max(a,Math.min(b,v)), lerp=(a,b,t)=>a+(b-a)*t;
+const ease=t=>t<.5?2*t*t:1-Math.pow(-2*t+2,2)/2, easeOut=t=>1-Math.pow(1-t,3), easeIn=t=>t*t*t, smooth=t=>t*t*(3-2*t);
+const fmt=s=>{s=Math.max(0,s);const m=Math.floor(s/60),r=s-m*60;return m+':'+(r<10?'0':'')+r.toFixed(1)};
+const fmtS=s=>{const m=Math.floor(s/60),r=Math.round(s-m*60);return m+':'+(r<10?'0':'')+r};
+const parseT=str=>{const m=String(str).trim().match(/^(\d+):(\d{1,2}(?:\.\d+)?)$/);if(m)return +m[1]*60+ +m[2];const n=parseFloat(str);return isNaN(n)?0:n};
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const POSE=window.SKATER_POSES, R=window.SkaterRig;
+const MIR={};const mir=n=>MIR[n]||(MIR[n]=R.mirrorPose(POSE[n]));
+
+/* ---------- Element vocabulary & base values (ISU SoV, singles) ---------- */
+const JUMPS={T:'Toe loop',S:'Salchow',Lo:'Loop',F:'Flip',Lz:'Lutz',A:'Axel',Eu:'Euler'};
+const REVW=['','single','double','triple','quadruple'];
+const SPINPOS={C:'camel',S:'sit',U:'upright',L:'layback'};
+const MOVES={Spiral:'Spiral',SpreadEagle:'Spread eagle',InaBauer:'Ina Bauer',Hydroblade:'Hydroblade',Cantilever:'Cantilever',Crossovers:'Crossovers',Lunge:'Lunge'};
+const AIR={1:.40,2:.50,3:.62,4:.72};
+const BV_JUMP={T:[.4,1.3,4.2,9.5],S:[.4,1.3,4.3,9.7],Lo:[.5,1.7,4.9,10.5],F:[.5,1.8,5.3,11.0],Lz:[.6,2.1,5.9,11.5],A:[1.1,3.3,8.0,12.5],Eu:[.5,.5,.5,.5]};
+const BV_SPIN={CSp:[1.4,1.7,1.9,2.3,2.6],SSp:[1.1,1.3,1.6,2.1,2.5],USp:[1.0,1.2,1.5,1.9,2.0],LSp:[1.2,1.5,1.9,2.4,2.7],
+  FCSp:[1.6,1.9,2.3,2.8,3.2],FSSp:[1.7,2.0,2.3,2.6,3.0],FUSp:[1.5,1.7,2.0,2.4,2.9],
+  CCSp:[1.7,2.0,2.3,2.8,3.2],CSSp:[1.6,1.9,2.3,2.6,3.0],CUSp:[1.5,1.7,2.0,2.4,2.9],CLSp:[1.7,2.0,2.4,2.9,3.2],
+  CoSp:[1.5,1.7,2.0,2.5,3.0],CCoSp:[1.7,2.0,2.5,3.0,3.5],FCoSp:[1.7,2.0,2.5,3.0,3.5],FCCoSp:[2.0,2.5,3.0,3.5,4.0],ChSp:[3.0,3.0,3.0,3.0,3.0]};
+const BV_STEP=[1.5,1.8,2.6,3.3,3.9], BV_CHSQ=3.0;
+const BV_LIFT={'1Li':[1.5,2.0,2.5,3.0,3.5],'2Li':[2.0,2.5,3.0,3.5,4.0],'3Li':[3.5,4.0,4.5,5.0,5.5],'4Li':[4.0,4.5,5.0,5.5,6.0],'5ALi':[4.5,5.0,5.5,6.0,6.5],'5BLi':[4.5,5.0,5.5,6.0,6.5],'5RLi':[5.0,5.5,6.0,6.5,7.0],'5SLi':[5.0,5.5,6.0,6.5,7.0],'5TLi':[5.0,5.5,6.0,6.5,7.0]};
+const BV_TWIST={1:[1.4,1.6,1.8,2.1,2.4],2:[3.6,3.9,4.3,4.7,5.1],3:[5.3,5.6,6.0,6.4,6.8],4:[7.8,8.1,8.5,8.9,9.3]};
+const BV_THROW={T:[.6,1.6,4.4,9.7],S:[.6,1.6,4.5,9.9],Lo:[.7,2.0,5.0,10.7],F:[.7,2.1,5.4,11.3],Lz:[.8,2.4,6.0,11.8],A:[1.3,3.6,8.1,12.8]};
+const BV_DS={Fi:[2.5,2.8,3.1,3.4,3.7],Fo:[2.6,2.9,3.2,3.5,3.8],Bi:[2.9,3.2,3.5,3.8,4.1],Bo:[3.0,3.3,3.6,3.9,4.2]};
+const BV_PSP={PCoSp:[2.0,2.5,3.0,3.5,4.0],PSp:[1.5,1.8,2.1,2.5,2.9],PChSp:[3.0,3.0,3.0,3.0,3.0]};
+const LVL=l=>l==='B'?0:(+l||4);
+
+function parseCode(raw){
+  const code=String(raw).trim();let m;
+  if(/^\d(T|S|Lo|F|Lz|A|Eu)(\+\d(T|S|Lo|F|Lz|A|Eu))*$/.test(code)){
+    const parts=code.split('+').map(p=>({revs:+p[0],type:p.slice(1)}));
+    const names=parts.map(p=>(p.type==='Eu'?'Euler':REVW[p.revs]+' '+JUMPS[p.type]));
+    const bv=parts.reduce((a,p)=>a+(BV_JUMP[p.type]?BV_JUMP[p.type][Math.min(3,p.revs)-1]||0:0),0);
+    const dur=.6+parts.reduce((a,p)=>a+airOf(p)+.5,0)+.5;
+    return {code,kind:'jump',parts,name:names.join(' + '),dur,bv,pre:.6};
+  }
+  if((m=code.match(/^(F)?(C|S|U|L|CC|CS|CU|CL|Co|CCo|FCCo)?Sp(B|[1-4])?$/))){
+    const fly=!!m[1]||/^FCCo/.test(code);let body=(m[2]||'U').replace(/^F/,'');
+    let positions=[],change=false,combo=false,name;
+    if(body==='Co'){combo=true;positions=['C','S','U'];name='combination spin'}
+    else if(body==='CCo'){combo=true;change=true;positions=['C','S','S','U'];name='combination spin, change of foot'}
+    else if(body.length===2){change=true;positions=[body[1],body[1]];name=SPINPOS[body[1]]+' spin, change of foot'}
+    else {positions=[body];name=SPINPOS[body]+' spin'}
+    if(fly)name='flying '+name;
+    const lvl=m[3]?' level '+m[3]:'';const key=code.replace(/(B|[1-4])$/,'');
+    const bv=(BV_SPIN[key]||BV_SPIN.USp)[LVL(m[3])];
+    return {code,kind:'spin',fly,change,combo,positions,level:LVL(m[3]),name:name+lvl,dur:change?9.5:8,bv,pre:1.0};
+  }
+  if(/^ChSp1?$/.test(code))return {code,kind:'spin',fly:false,change:false,combo:true,choreo:true,positions:['U','L','C'],level:1,name:'choreographic spin',dur:6,bv:3.0,pre:1.0};
+  if((m=code.match(/^StSq(B|[1-4])?$/)))return {code,kind:'steps',name:'step sequence'+(m[1]?' level '+m[1]:''),dur:32,bv:BV_STEP[LVL(m[1])],pre:0};
+  if((m=code.match(/^ChSq1?$/)))return {code,kind:'choreo',name:'choreographic sequence',dur:26,bv:BV_CHSQ,pre:0};
+  if(MOVES[code])return {code,kind:'move',move:code,name:MOVES[code],dur:code==='Crossovers'?6:4.5,bv:0,pre:0};
+  // pairs
+  if((m=code.match(/^(\d)(T|S|Lo|F|Lz|A)Th$/)))return {code,kind:'throw',revs:+m[1],type:m[2],name:'throw '+REVW[+m[1]]+' '+JUMPS[m[2]],dur:.6+AIR[+m[1]]+.3+1.0,bv:BV_THROW[m[2]][+m[1]-1],pre:.6};
+  if((m=code.match(/^(\d)Tw(B|[1-4])?$/)))return {code,kind:'twist',revs:+m[1],level:LVL(m[2]),name:REVW[+m[1]]+' twist lift'+(m[2]?' level '+m[2]:''),dur:2.6,bv:BV_TWIST[+m[1]][LVL(m[2])],pre:.6};
+  if((m=code.match(/^(1|2|3|4|5A|5B|5R|5S|5T)Li(B|[1-4])?$/)))return {code,kind:'lift',group:m[1],level:LVL(m[2]),name:'group '+m[1].replace(/[A-Z]/,c=>' '+c)+' lift'+(m[2]?' level '+m[2]:''),dur:7,bv:BV_LIFT[m[1]+'Li'][LVL(m[2])],pre:.8};
+  if(/^ChLi1?$/.test(code))return {code,kind:'lift',group:'Ch',choreo:true,level:1,name:'choreographic lift',dur:5,bv:3.0,pre:.8};
+  if((m=code.match(/^(Fi|Fo|Bi|Bo)Ds(B|[1-4])?$/)))return {code,kind:'deathspiral',edge:m[1],level:LVL(m[2]),name:({Fi:'forward inside',Fo:'forward outside',Bi:'backward inside',Bo:'backward outside'})[m[1]]+' death spiral'+(m[2]?' level '+m[2]:''),dur:6.5,bv:BV_DS[m[1]][LVL(m[2])],pre:1.0};
+  if((m=code.match(/^(PCoSp|PSp|PChSp)(B|[1-4])?$/)))return {code,kind:'pairspin',combo:m[1]!=='PSp',choreo:m[1]==='PChSp',level:LVL(m[2]),positions:m[1]==='PSp'?['S','S']:['C','S','U'],name:({PCoSp:'pair combination spin',PSp:'pair spin',PChSp:'choreographic pair spin'})[m[1]]+(m[2]?' level '+m[2]:''),dur:8,bv:BV_PSP[m[1]][LVL(m[2])],pre:1.0};
+  return {code,kind:'unknown',name:'unrecognised code',dur:3,bv:0,pre:0};
+}
+function airOf(p){return (AIR[p.revs]||.6)+(p.type==='A'?.05:0)}
+const CODE_LISTS={
+  S:['2A','3A','3T','3S','3Lo','3F','3Lz','4T','4S','4Lo','4F','4Lz','4A','3Lz+3T','3F+3T','3Lz+2T','2A+3T','3Lz+1Eu+3S','3F+3Lo','4Lz+3T','4T+3T','4S+3T','4T+1Eu+3S','2Lz+2T','2A+2T',
+     'FCSp4','FSSp4','FUSp4','LSp4','SSp4','CSp4','CCSp4','CSSp4','CLSp4','CCoSp4','CoSp4','FCCoSp4','ChSp1','StSq4','StSq3','ChSq1','Spiral','SpreadEagle','InaBauer','Hydroblade','Cantilever','Lunge','Crossovers'],
+  P:['3Tw4','4Tw4','2Tw4','3LoTh','3FTh','3STh','3LzTh','3TTh','4STh','3Li4','4Li4','5ALi4','5BLi4','5RLi4','5SLi4','5TLi4','ChLi1','FiDs4','FoDs4','BiDs4','BoDs4','PCoSp4','PSp4','PChSp1',
+     '3T','3S','2A','3Lz','3T+2T','3S+2T','2A+2T','3T+1Eu+2S','FCSp4','CCoSp4','StSq4','ChSq1','Spiral','SpreadEagle','InaBauer','Lunge']
+};
+
+/* ---------- Program state ---------- */
+const LEN={SP:{senior:160,junior:160,novice:140},FS:{senior:240,junior:210,novice:180}};
+const state={disc:'W',level:'senior',seg:'SP',duration:160,elements:[],time:0,playing:false,rate:1,cam:'broadcast',
+  audio:null,peaks:null,musicDur:0,trimStart:0,trimEnd:0,bpm:0,beat0:0,replay:null,replayOn:true,snap:false,ready:false};
+let uid=1;
+const mk=(t,code,x,z,extra)=>({id:uid++,t,code,x,z,extra:!!extra});
+const SAMPLES={
+  'W-senior-SP':[[22,'3Lz+3T',-14,-6],[44,'3F',16,5],[62,'FCSp4',6,-8],[78,'StSq4',-24,9],[120,'2A',-10,-5],[133,'LSp4',8,7],[148,'CCoSp4',0,0]],
+  'M-senior-SP':[[20,'4Lz+3T',-15,-6],[42,'4S',16,6],[60,'FCSp4',6,-8],[76,'StSq4',-24,9],[118,'3A',-10,-4],[133,'CSSp4',9,7],[148,'CCoSp4',0,0]],
+  'W-junior-SP':[[22,'2A',-14,-6],[42,'3Lz',16,5],[60,'FSSp4',6,-8],[76,'StSq3',-24,9],[118,'3F+2T',-10,-5],[133,'LSp3',8,7],[148,'CCoSp3',0,0]],
+  'M-junior-SP':[[22,'2A',-14,-6],[42,'3Lz',16,5],[60,'FCSp4',6,-8],[76,'StSq3',-24,9],[118,'3F+3T',-10,-5],[133,'CSSp3',8,7],[148,'CCoSp3',0,0]],
+  'W-novice-SP':[[18,'2A',-14,-6],[36,'2Lz',16,5],[54,'FCSp3',6,-8],[68,'StSq2',-24,9],[106,'2F+2T',-10,-5],[118,'LSp3',8,7],[130,'CCoSp3',0,0]],
+  'M-novice-SP':[[18,'2A',-14,-6],[36,'2Lz',16,5],[54,'FCSp3',6,-8],[68,'StSq2',-24,9],[106,'2F+2T',-10,-5],[118,'CSSp3',8,7],[130,'CCoSp3',0,0]],
+  'W-senior-FS':[[20,'3Lz+3T',-16,-6],[38,'3Lo',14,6],[54,'3F',-12,7],[68,'FCSp4',6,-8],[84,'StSq4',-24,9],[130,'3Lz',16,-6],[146,'2A+1Eu+3S',-14,5],[164,'3S',12,-7],[180,'2A',-8,6],[194,'ChSq1',20,-8],[216,'FCCoSp4',-6,4],[230,'ChSp1',0,0]],
+  'M-senior-FS':[[20,'4Lz+3T',-16,-6],[38,'4S',14,6],[54,'3A',-12,7],[68,'FCSp4',6,-8],[84,'StSq4',-24,9],[130,'4T+1Eu+3S',16,-6],[146,'3Lz',-14,5],[164,'3Lo',12,-7],[180,'3A+2T',-8,6],[194,'ChSq1',20,-8],[216,'FCCoSp4',-6,4],[230,'ChSp1',0,0]],
+  'P-senior-SP':[[18,'3Tw4',-14,-5],[34,'3Li4',10,6],[56,'3LoTh',-12,7],[74,'3T',16,-6],[92,'FiDs4',2,0],[110,'PCoSp4',8,-7],[126,'StSq4',-24,9]],
+  'P-senior-FS':[[18,'3Tw4',-14,-5],[36,'3Lz+2T',14,6],[54,'3LoTh',-12,7],[70,'5ALi4',12,-6],[94,'3S',-14,5],[110,'3FTh',12,-7],[126,'ChLi1',-8,6],[152,'BoDs4',6,0],[172,'PCoSp4',-6,-6],[192,'StSq4',-24,9],[216,'ChSq1',20,-8],[230,'PChSp1',0,0]],
+};
+function loadSample(){
+  const key=state.disc+'-'+state.level+'-'+state.seg;
+  let s=SAMPLES[key];
+  if(!s){const base=SAMPLES[state.disc+'-senior-'+state.seg]||SAMPLES['W-senior-'+state.seg];const f=state.duration/(state.seg==='SP'?160:240);
+    s=base.map(e=>[Math.round(e[0]*f),state.level==='senior'?e[1]:e[1].replace(/^4/,'3').replace(/\+3T/,'+2T').replace(/4Tw/,'3Tw').replace(/4STh/,'3STh'),e[2],e[3]])}
+  state.elements=s.map(e=>mk(e[0],e[1],e[2],e[3]));
+  rebuild();
+}
+
+/* ---------- Path geometry ---------- */
+const inside=(x,z)=>({x:clamp(x,-27.5,27.5),z:clamp(z,-12.8,12.8)});
+function hermite(p0,d0,p1,d1,n){
+  const pts=[];for(let i=0;i<=n;i++){const u=i/n,u2=u*u,u3=u2*u;const h00=2*u3-3*u2+1,h10=u3-2*u2+u,h01=-2*u3+3*u2,h11=u3-u2;
+    pts.push({x:h00*p0.x+h10*d0.x+h01*p1.x+h11*d1.x,z:h00*p0.z+h10*d0.z+h01*p1.z+h11*d1.z})}
+  return pts;
+}
+function rot(v,a){const c=Math.cos(a),s=Math.sin(a);return {x:v.x*c-v.z*s,z:v.x*s+v.z*c}}
+function norm(v){const L=Math.hypot(v.x,v.z)||1;return {x:v.x/L,z:v.z/L}}
+// path: list of points -> arc-length table with tangent & curvature
+function makePath(pts){
+  const n=pts.length;const s=[0];for(let i=1;i<n;i++)s.push(s[i-1]+Math.hypot(pts[i].x-pts[i-1].x,pts[i].z-pts[i-1].z));
+  const L=s[n-1]||1e-6;
+  const at=u=>{const target=clamp(u,0,1)*L;let lo=0,hi=n-1;while(hi-lo>1){const mid=(lo+hi)>>1;if(s[mid]<=target)lo=mid;else hi=mid}
+    const seg=s[hi]-s[lo]||1e-6;const f=(target-s[lo])/seg;const a=pts[lo],b=pts[hi];
+    const a2=pts[Math.max(0,lo-1)],b2=pts[Math.min(n-1,hi+1)];
+    const t1=norm({x:b.x-a.x,z:b.z-a.z});const t0=norm({x:a.x-a2.x,z:a.z-a2.z}),t2=norm({x:b2.x-b.x,z:b2.z-b.z});
+    const dth=Math.atan2(t0.x*t2.z-t0.z*t2.x,t0.x*t2.x+t0.z*t2.z);const ds=(s[hi]-s[Math.max(0,lo-1)]+ (s[Math.min(n-1,hi+1)]-s[lo]))/2||1e-6;
+    return {x:a.x+(b.x-a.x)*f,z:a.z+(b.z-a.z)*f,dir:t1,kappa:dth/ds}};
+  return {L,at,pts};
+}
+
+/* ---------- Timeline ---------- */
+let TL=null;
+function rebuild(){
+  state.elements.sort((a,b)=>a.t-b.t);
+  const segs=[];const D=state.duration;const pairs=state.disc==='P';
+  const items=state.elements.map(el=>({el,info:parseCode(el.code)}));
+  // element windows
+  for(const it of items){it.t0=Math.max(0,it.el.t-it.info.pre);it.t1=Math.min(D,it.el.t+it.info.dur-it.info.pre)}
+  // opening
+  const openT=Math.min(2.0,D*.2);
+  const first=items[0];const start=first?inside(first.el.x*.4,first.el.z*.4):{x:-4,z:0};
+  let prevPos=start,prevDir={x:1,z:0},prevT=openT,prevStationary=true,prevBack=false;
+  segs.push({kind:'open',t0:0,t1:openT,pos:start});
+  let lobe=1;
+  for(let i=0;i<items.length;i++){
+    const it=items[i];const k=it.info.kind;
+    if(it.t0<prevT+0.4){it.t0=prevT+0.4;it.el.t=it.t0+it.info.pre}
+    // decide element geometry
+    const P=inside(it.el.x,it.el.z);
+    let entryDir=norm({x:P.x-prevPos.x,z:P.z-prevPos.z});if(!isFinite(entryDir.x)||(Math.abs(entryDir.x)+Math.abs(entryDir.z))<1e-6)entryDir=prevDir;
+    const isJumpLike=k==='jump'||k==='throw';
+    const back=isJumpLike&&!(k==='jump'&&it.info.parts[0].type==='A');
+    let elemPath=null,elemStart=P,elemEnd=P,exitDir=entryDir,stationary=false;
+    if(isJumpLike||k==='twist'){
+      const v=4.8;const T=it.t1-it.t0;const a={x:P.x-entryDir.x*v*it.info.pre,z:P.z-entryDir.z*v*it.info.pre};const b={x:P.x+entryDir.x*v*(T-it.info.pre),z:P.z+entryDir.z*v*(T-it.info.pre)};
+      const A=inside(a.x,a.z),B=inside(b.x,b.z);elemPath=makePath([A,P,B]);elemStart=A;elemEnd=B;exitDir=entryDir;
+    }else if(k==='spin'||k==='pairspin'||k==='deathspiral'){
+      // hook into the spin on a curve, exit on a curve
+      const a={x:P.x-entryDir.x*3.5,z:P.z-entryDir.z*3.5};const A=inside(a.x,a.z);
+      elemPath=makePath(hermite(A,{x:entryDir.x*3,z:entryDir.z*3},P,rot({x:entryDir.x*1.5,z:entryDir.z*1.5},.9*lobe),16));
+      elemStart=A;elemEnd=P;stationary=true;exitDir=rot(entryDir,1.2*lobe);
+    }else if(k==='steps'||k==='choreo'){
+      const n=k==='steps'?3:2,sgn=P.x<0?1:-1,span=k==='steps'?48:34,amp=k==='steps'?9:7;
+      const pts=[];let cur={x:P.x,z:P.z},cd=entryDir;
+      for(let j=1;j<=n;j++){const u=j/n;const nx=inside(P.x+sgn*span*u,(j%2?-1:1)*amp*lobe+P.z*.15);const chord={x:nx.x-cur.x,z:nx.z-cur.z};const d0={x:cd.x*18,z:cd.z*18};const nd=rot(norm(chord),(j%2?-1:1)*1.1*lobe);const d1={x:nd.x*18,z:nd.z*18};
+        const seg=hermite(cur,d0,nx,d1,24);if(j>1)seg.shift();pts.push(...seg);cur=nx;cd=nd}
+      elemPath=makePath(pts);elemStart=P;elemEnd=cur;exitDir=cd;
+    }else if(k==='lift'){
+      const T=it.t1-it.t0;const len=3.5*T;const nd=rot(entryDir,.8*lobe);const end=inside(P.x+(entryDir.x+nd.x)*.5*len*.9,P.z+(entryDir.z+nd.z)*.5*len*.9);
+      elemPath=makePath(hermite(P,{x:entryDir.x*len*.7,z:entryDir.z*len*.7},end,{x:nd.x*len*.7,z:nd.z*len*.7},30));elemStart=P;elemEnd=end;exitDir=nd;
+    }else{ // move
+      const T=it.t1-it.t0;const len=4.5*T;const nd=rot(entryDir,.6*lobe);const end=inside(P.x+(entryDir.x+nd.x)*.5*len,P.z+(entryDir.z+nd.z)*.5*len);
+      elemPath=makePath(hermite(P,{x:entryDir.x*len,z:entryDir.z*len},end,{x:nd.x*len,z:nd.z*len},20));elemStart=P;elemEnd=end;exitDir=nd;
+    }
+    // transition from prevPos to elemStart over [prevT, it.t0]
+    const gap=it.t0-prevT;
+    if(gap>0.05){
+      const chord={x:elemStart.x-prevPos.x,z:elemStart.z-prevPos.z};const Lc=Math.hypot(chord.x,chord.z);
+      let pts;
+      if(Lc<0.5){pts=[prevPos,elemStart]}
+      else{const cd=norm(chord);const bend=Math.min(.9,.25+gap*.06)*lobe;const d0=prevStationary?{x:cd.x*Lc*.5,z:cd.z*Lc*.5}:rot({x:prevDir.x*Lc*.8,z:prevDir.z*Lc*.8},0);
+        const d1={x:entryDir.x*Lc*.8,z:entryDir.z*Lc*.8};
+        // add a lobe: bend both tangents away from the chord
+        const dd0=rot(d0,bend*.6),dd1=rot(d1,-bend*.6);pts=hermite(prevPos,dd0,elemStart,dd1,Math.max(12,Math.round(Lc*1.5)))}
+      const path=makePath(pts);
+      segs.push({kind:'trans',t0:prevT,t1:it.t0,path,fromStationary:prevStationary,toBack:back,fromBack:prevBack,next:it,speed:path.L/gap});
+      lobe=-lobe;
+    }
+    it.path=elemPath;it.back=back;
+    segs.push({kind:'elem',t0:it.t0,t1:it.t1,item:it,path:elemPath,stationary});
+    prevPos=elemEnd;prevDir=exitDir;prevT=it.t1;prevStationary=stationary;prevBack=isJumpLike||k==='twist';
+  }
+  // finish
+  if(prevT<D-1.5){const end=inside(prevPos.x+prevDir.x*6,prevPos.z+prevDir.z*6);const path=makePath(hermite(prevPos,{x:prevDir.x*6,z:prevDir.z*6},end,{x:prevDir.x*2,z:prevDir.z*2},10));segs.push({kind:'trans',t0:prevT,t1:D-1.5,path,fromStationary:prevStationary,toBack:false,fromBack:prevBack,speed:path.L/(D-1.5-prevT),final:true});prevPos=end}
+  segs.push({kind:'finish',t0:Math.min(D-1.5,prevT),t1:D,pos:prevPos});
+  TL={segs,items};
+  TL.samples=[];for(let i=0;i<=800;i++){const t=D*i/800;const s=locate(t);TL.samples.push({x:s.x,z:s.z})}
+  renderTable();renderMap();renderRules();drawWave();updateMarkers();updateStats();
+  document.getElementById('progName').textContent=levelName()+' · '+(state.seg==='SP'?'Short Program':'Free Program')+' · '+fmtS(state.duration);
+}
+function levelName(){return ({senior:'Senior',junior:'Junior',novice:'Advanced Novice'})[state.level]+' '+({W:'Women',M:'Men',P:'Pairs'})[state.disc]}
+function segAt(t){const s=TL.segs;for(let i=0;i<s.length;i++){if(t>=s[i].t0&&(t<s[i].t1||i===s.length-1))return s[i]}return s[s.length-1]}
+// position, direction, curvature at time t
+function locate(t){
+  const sg=segAt(t);const T=Math.max(1e-3,sg.t1-sg.t0);const lt=clamp((t-sg.t0)/T,0,1);
+  if(sg.kind==='open'||sg.kind==='finish')return {x:sg.pos.x,z:sg.pos.z,dir:{x:0,z:1},kappa:0,speed:0,seg:sg};
+  if(sg.kind==='trans'){let u=lt;if(sg.fromStationary)u=u<.25?easeIn(u/.25)*.25*0+ (u/.25)*(u/.25)*.25 : u; // ease out of a stop
+    const p=sg.path.at(u);return Object.assign(p,{speed:sg.speed,seg:sg,u});}
+  const it=sg.item,k=it.info.kind;
+  if(k==='spin'||k==='pairspin'||k==='deathspiral'){const pre=it.info.pre/T;const u=lt<pre?smooth(lt/pre):1;const p=sg.path.at(u);return Object.assign(p,{speed:lt<pre?4:0,seg:sg})}
+  const p=sg.path.at(lt);return Object.assign(p,{speed:4.5,seg:sg});
+}
+
+/* ---------- Pose tracks ---------- */
+const TURNS=['rocker','counter','bracket','twizzle','choctaw','loop','mohawk','twizzle','rocker','bracket'];
+function spinTrack(inf,lt,T){
+  const entry=inf.pre||1,exit=.9,spinT=T-entry-exit;const n=inf.positions.length;
+  const posPose=(code,mirrorIt)=>{let p=POSE[({C:'camel',S:'sit',U:'upright',L:'layback'})[code]||'upright'];return mirrorIt?R.mirrorPose(p):p};
+  const changeAt=inf.change?Math.ceil(n/2):n;
+  if(lt<entry){const u=lt/entry;let pose,air=0;
+    if(inf.fly){pose=u<.45?R.mixPose(POSE.glide,POSE.crouch,smooth(u/.45)):u<.8?R.mixPose(POSE.crouch,POSE.fly,easeOut((u-.45)/.35)):R.mixPose(POSE.fly,posPose(inf.positions[0]),smooth((u-.8)/.2));air=u>.45&&u<.95?Math.sin((u-.45)/.5*Math.PI)*.5:0}
+    else pose=R.mixPose(POSE.glide,posPose(inf.positions[0]),smooth(u));
+    return {pose,yaw:u*u*TAU*.3,air}}
+  if(lt<entry+spinT){const u=(lt-entry)/spinT;const idx=Math.min(n-1,Math.floor(u*n));const lu=u*n-idx;
+    const m=inf.change&&idx>=changeAt;let p=posPose(inf.positions[idx],m);
+    // level-4 flourish: layback -> Biellmann at the end
+    if(inf.positions[idx]==='L'&&inf.level>=4&&lu>.55)p=R.mixPose(POSE.layback,POSE.biellmann,smooth(Math.min(1,(lu-.55)/.25)));
+    const next=idx+1;if(next<n&&lu>.8){let q=posPose(inf.positions[next],inf.change&&next>=changeAt);p=R.mixPose(p,q,smooth((lu-.8)/.2))}
+    let air=0;if(inf.change&&idx===changeAt-1&&lu>.9)air=Math.sin((lu-.9)/.1*Math.PI)*.16;
+    const rate=inf.choreo?1.3:2.0;const accel=inf.positions[idx]==='U'&&idx===n-1?1+lu*1.2:1;
+    return {pose:p,yaw:TAU*.3+TAU*rate*spinT*u*accel,air}}
+  const u=(lt-entry-spinT)/exit;const last=posPose(inf.positions[n-1],inf.change);const rate=inf.choreo?1.3:2.0;
+  return {pose:R.mixPose(last,POSE.openArms,easeOut(u)),yaw:TAU*.3+TAU*rate*spinT+TAU*.5*easeOut(u),air:0};
+}
+function jumpTrack(inf,lt){
+  const pre=inf.pre;let t=lt;const toe=['T','F','Lz'].includes(inf.parts[0].type);
+  if(t<pre){const u=t/pre;const target=toe?POSE.pick:POSE.crouch;return {pose:R.mixPose(POSE.glide,target,smooth(u)),yaw:0,air:0}}
+  t-=pre;let yawAcc=0;
+  for(let i=0;i<inf.parts.length;i++){
+    const p=inf.parts[i],air=airOf(p),h=9.81*air*air/8;
+    if(t<air){const u=t/air;const pose=u<.18?R.mixPose(POSE.launch,POSE.tuck,u/.18):u>.8?R.mixPose(POSE.tuck,POSE.land,smooth((u-.8)/.2)):POSE.tuck;
+      const revs=p.revs+(p.type==='A'?.5:0);const spin=TAU*revs*(u<.12?(u/.12)*(u/.12)*.12:.12+(u-.12));
+      return {pose,yaw:yawAcc+spin,air:4*h*u*(1-u),inAir:true,part:i}}
+    t-=air;yawAcc+=TAU*(p.revs+(p.type==='A'?.5:0));
+    if(i<inf.parts.length-1){if(t<.5){const u=t/.5;return {pose:u<.4?POSE.land:R.mixPose(POSE.land,POSE.crouch,smooth((u-.4)/.6)),yaw:yawAcc,air:0,part:i}}t-=.5}
+  }
+  const u=clamp(t/.5,0,1);return {pose:R.mixPose(POSE.land,POSE.glide,smooth(u)),yaw:yawAcc,air:0,landed:true};
+}
+function stepsTrack(lt,T){
+  const u=lt/T;const ph=lt*1.15;const s=(Math.sin(ph*Math.PI)+1)/2;let pose=R.mixPose(POSE.stepA,POSE.stepB,smooth(s));let yaw=0;
+  for(const c of [.36,.72]){const d=lt-c*T;if(d>=0&&d<1.0){const v=d/1.0;pose=R.mixPose(pose,POSE.twizzle,Math.sin(v*Math.PI));yaw=TAU*2*smooth(v)}}
+  const turn=TURNS[Math.floor(u*TURNS.length)%TURNS.length];return {pose,yaw,air:0,turn};
+}
+function choreoTrack(lt,T){
+  const u=lt/T;const seq=[POSE.spiral,POSE.eagle,POSE.bauer,POSE.lunge];const names=['spiral','spread eagle','Ina Bauer','lunge'];const n=seq.length;const k=Math.min(n-1,Math.floor(u*n));const lu=u*n-k;
+  let pose=seq[k];if(lu<.2)pose=R.mixPose(k?seq[k-1]:POSE.glide,seq[k],smooth(lu/.2));if(lu>.85&&k===n-1)pose=R.mixPose(seq[k],POSE.openArms,smooth((lu-.85)/.15));
+  return {pose,yaw:0,air:0,turn:names[k],facingBack:k===1||k===2};
+}
+function moveTrack(inf,lt,T){
+  const u=lt/T;const map={Spiral:'spiral',SpreadEagle:'eagle',InaBauer:'bauer',Hydroblade:'hydro',Cantilever:'cantilever',Lunge:'lunge'};
+  const nm=map[inf.move];if(!nm){const ph=lt*1.5;const s=(Math.sin(ph*Math.PI)+1)/2;return {pose:R.mixPose(POSE.crossA,POSE.crossB,smooth(s)),yaw:0,air:0}}
+  const p=POSE[nm];const pose=u<.22?R.mixPose(POSE.glide,p,smooth(u/.22)):u>.8?R.mixPose(p,POSE.glide,smooth((u-.8)/.2)):p;
+  return {pose,yaw:0,air:0,facingBack:nm==='eagle'||nm==='bauer'};
+}
+// connecting skating: choose strokes/crossovers from curvature and facing
+function transTrack(sg,t,loc){
+  const T=sg.t1-sg.t0,lt=t-sg.t0,u=lt/T;const k=loc.kappa||0;const sp=sg.speed||4;
+  // facing: start forward (or backward right after a jump), turn backward before a jump
+  let backBlend=0;const turnDur=.7;
+  const toBack=sg.toBack,tBack=T-Math.min(3.2,T*.45);
+  if(sg.fromBack){const tf=Math.min(1.6,T*.3);backBlend=lt<tf?1-smooth(lt/tf):0}
+  if(toBack){const bb=lt>tBack?smooth(Math.min(1,(lt-tBack)/turnDur)):0;backBlend=Math.max(backBlend,bb)}
+  const back=backBlend>.5;
+  const rate=clamp(sp/4.2,.7,1.4);const ph=lt*rate;const s=(Math.sin(ph*Math.PI)+1)/2;
+  let a,b;
+  if(back){if(k>.025){a=POSE.bcrossA;b=POSE.bcrossB}else if(k<-.025){a=mir('bcrossA');b=mir('bcrossB')}else{a=POSE.glide;b=mir('glide')}}
+  else{if(k>.03){a=POSE.crossA;b=POSE.crossB}else if(k<-.03){a=mir('crossA');b=mir('crossB')}else{a=POSE.strokeL;b=mir('strokeL')}}
+  let pose=R.mixPose(a,b,smooth(s));
+  // turning moment: mohawk
+  const inTurn=(toBack&&lt>tBack&&lt<tBack+turnDur)||(sg.fromBack&&lt<Math.min(1.6,T*.3)&&lt>Math.min(1.6,T*.3)-turnDur);
+  if(inTurn)pose=R.mixPose(pose,POSE.mohawk,.6);
+  // arm phrasing for musicality
+  const phrase=(Math.sin(t*.55)+1)/2;pose=R.mixPose(pose,POSE.openArms,phrase*.3*(1-backBlend));
+  // ease out of a stationary start / into the final pose
+  if(sg.fromStationary&&lt<1.2)pose=R.mixPose(POSE.openArms,pose,smooth(lt/1.2));
+  if(sg.final&&u>.85)pose=R.mixPose(pose,POSE.glide,smooth((u-.85)/.15));
+  const label=back?(Math.abs(k)>.025?'Back crossovers':'Back edges'):(Math.abs(k)>.03?'Forward crossovers':'Stroking');
+  return {pose,yaw:0,air:0,backBlend,label:inTurn?'Mohawk turn':label};
+}
+// per-skater sample: returns {pose,yaw,air,backBlend,roll,lift,offset}
+function sampleSkater(t,who){
+  const loc=locate(t);const sg=loc.seg;const D=state.duration;const out={loc};
+  const pairs=state.disc==='P';const lateral=pairs?(who==='A'?.9:-.9):0;
+  if(sg.kind==='open'){const u=(t-sg.t0)/(sg.t1-sg.t0);Object.assign(out,{pose:R.mixPose(POSE.bow,POSE.openArms,smooth(u)),yaw:0,air:0,backBlend:0,label:'Opening pose',desc:'Hold at the start position until the music begins.',phase:'Opening',lateral});return out}
+  if(sg.kind==='finish'){const u=clamp((t-sg.t0)/(sg.t1-sg.t0),0,1);Object.assign(out,{pose:R.mixPose(POSE.glide,POSE.finish,smooth(u)),yaw:0,air:0,backBlend:0,label:'Final pose',desc:'Program ends.',phase:'Finish',lateral});return out}
+  if(sg.kind==='trans'){const r=transTrack(sg,t,loc);Object.assign(out,r,{label:r.label,desc:'Connecting skating built between the elements: edges, crossovers and arm phrasing.',phase:'Transition',lateral});return out}
+  const it=sg.item,inf=it.info,lt=t-sg.t0,T=sg.t1-sg.t0;out.item=it;out.lateral=lateral;
+  switch(inf.kind){
+    case 'jump':{const r=jumpTrack(inf,lt);Object.assign(out,r,{backBlend:it.back?1:(r.landed||r.inAir||r.part!=null?1:0)});
+      if(!it.back){/* Axel: forward takeoff, lands backward */out.backBlend=lt<inf.pre?0:1}
+      break}
+    case 'spin':{Object.assign(out,spinTrack(inf,lt,T),{backBlend:0});break}
+    case 'steps':{Object.assign(out,stepsTrack(lt,T),{backBlend:0});break}
+    case 'choreo':{const r=choreoTrack(lt,T);Object.assign(out,r,{backBlend:r.facingBack?1:0});break}
+    case 'move':{const r=moveTrack(inf,lt,T);Object.assign(out,r,{backBlend:r.facingBack?1:0});break}
+    case 'throw':{const pre=inf.pre,air=AIR[inf.revs]+.2,h=9.81*air*air/8;
+      if(who==='A'){ if(lt<pre){Object.assign(out,{pose:R.mixPose(POSE.glide,POSE.crouch,smooth(lt/pre)),yaw:0,air:0,backBlend:1})}
+        else if(lt<pre+air){const u=(lt-pre)/air;const pose=u<.15?R.mixPose(POSE.launch,POSE.tuck,u/.15):u>.8?R.mixPose(POSE.tuck,POSE.land,smooth((u-.8)/.2)):POSE.tuck;Object.assign(out,{pose,yaw:TAU*inf.revs*(u<.12?(u/.12)*(u/.12)*.12:.12+(u-.12)),air:4*h*u*(1-u),backBlend:1,inAir:true,lateral:.9+u*2.2})}
+        else {const u=clamp((lt-pre-air)/1.0,0,1);Object.assign(out,{pose:R.mixPose(POSE.land,POSE.glide,smooth(u)),yaw:TAU*inf.revs,air:0,backBlend:1,lateral:3.1-u*.6})}}
+      else { if(lt<pre){Object.assign(out,{pose:R.mixPose(POSE.glide,POSE.pick,smooth(lt/pre)),yaw:0,air:0,backBlend:1})}
+        else {const u=clamp((lt-pre)/1.2,0,1);Object.assign(out,{pose:R.mixPose(POSE.launch,POSE.openArms,smooth(u)),yaw:0,air:0,backBlend:1-smooth(u)})}}
+      break}
+    case 'twist':{const pre=inf.pre,air=1.0,h=2.1;
+      if(who==='A'){ if(lt<pre){const u=lt/pre;Object.assign(out,{pose:R.mixPose(POSE.glide,POSE.crouch,smooth(u)),yaw:0,air:0,backBlend:1,lateral:.9*(1-u)})}
+        else if(lt<pre+air){const u=(lt-pre)/air;const pose=u<.2?R.mixPose(POSE.launch,POSE.tuck,u/.2):u>.85?R.mixPose(POSE.tuck,POSE.land,(u-.85)/.15):POSE.tuck;Object.assign(out,{pose,yaw:TAU*inf.revs*smooth(u),air:4*h*u*(1-u)+.1,backBlend:1,inAir:true,lateral:0})}
+        else {const u=clamp((lt-pre-air)/1.0,0,1);Object.assign(out,{pose:R.mixPose(POSE.land,POSE.glide,smooth(u)),yaw:TAU*inf.revs,air:0,backBlend:1,lateral:.9*u})}}
+      else { if(lt<pre){Object.assign(out,{pose:R.mixPose(POSE.glide,POSE.crouch,smooth(lt/pre)),yaw:0,air:0,backBlend:1,lateral:-.9*(1-lt/pre)-.0})}
+        else if(lt<pre+air){const u=(lt-pre)/air;Object.assign(out,{pose:R.mixPose(POSE.launch,POSE.catchArms,smooth(Math.min(1,u*2))),yaw:0,air:0,backBlend:1,lateral:-.35})}
+        else {const u=clamp((lt-pre-air)/1.0,0,1);Object.assign(out,{pose:R.mixPose(POSE.catchArms,POSE.glide,smooth(u)),yaw:0,air:0,backBlend:1,lateral:-.35-.55*u})}}
+      break}
+    case 'lift':{const pre=inf.pre,down=.8,hold=T-pre-down;
+      if(who==='A'){ if(lt<pre){const u=lt/pre;Object.assign(out,{pose:R.mixPose(POSE.glide,POSE.star,smooth(u)),yaw:0,air:2.05*smooth(u),backBlend:0,lateral:.9*(1-u),roll:-1.5*smooth(u)})}
+        else if(lt<pre+hold){const u=(lt-pre)/hold;Object.assign(out,{pose:POSE.star,yaw:TAU*1.5*u,air:2.05+Math.sin(u*TAU*2)*.04,backBlend:0,lateral:0,roll:-1.5})}
+        else {const u=clamp((lt-pre-hold)/down,0,1);Object.assign(out,{pose:R.mixPose(POSE.star,POSE.land,smooth(u)),yaw:TAU*1.5,air:2.05*(1-smooth(u)),backBlend:1,lateral:.9*u,roll:-1.5*(1-smooth(u))})}}
+      else { if(lt<pre){const u=lt/pre;Object.assign(out,{pose:R.mixPose(POSE.crouch,POSE.liftMan,smooth(u)),yaw:0,air:0,backBlend:0,lateral:-.9*(1-u)})}
+        else if(lt<pre+hold){const u=(lt-pre)/hold;Object.assign(out,{pose:POSE.liftMan,yaw:TAU*1.5*u,air:0,backBlend:0,lateral:0})}
+        else {const u=clamp((lt-pre-hold)/down,0,1);Object.assign(out,{pose:R.mixPose(POSE.liftMan,POSE.openArms,smooth(u)),yaw:TAU*1.5,air:0,backBlend:0,lateral:-.9*u})}}
+      break}
+    case 'deathspiral':{const pre=inf.pre,spinT=T-pre-.8;const radius=1.75;
+      if(lt<pre){const u=lt/pre;if(who==='A')Object.assign(out,{pose:R.mixPose(POSE.glide,POSE.layout,smooth(u)),yaw:0,air:0,backBlend:0,lateral:.9+(radius-.9)*smooth(u),roll:-1.2*smooth(u)});
+        else Object.assign(out,{pose:R.mixPose(POSE.glide,POSE.pivot,smooth(u)),yaw:0,air:0,backBlend:0,lateral:-.9*(1-u)})}
+      else if(lt<pre+spinT){const u=(lt-pre)/spinT;const ang=TAU*1.1*u;
+        if(who==='A')Object.assign(out,{pose:POSE.layout,yaw:0,air:0,backBlend:0,orbit:{r:radius,ang},roll:-1.25,lateral:0});
+        else Object.assign(out,{pose:POSE.pivot,yaw:ang,air:0,backBlend:0,lateral:0})}
+      else {const u=clamp((lt-pre-spinT)/.8,0,1);if(who==='A')Object.assign(out,{pose:R.mixPose(POSE.layout,POSE.openArms,smooth(u)),yaw:0,air:0,backBlend:0,orbit:{r:radius*(1-u*.4),ang:TAU*1.1+u*.6},roll:-1.25*(1-smooth(u)),lateral:0});
+        else Object.assign(out,{pose:R.mixPose(POSE.pivot,POSE.openArms,smooth(u)),yaw:TAU*1.1+u*.6,air:0,backBlend:0,lateral:0})}
+      break}
+    case 'pairspin':{const r=spinTrack(Object.assign({},inf,{fly:false,change:false,level:inf.level,positions:inf.positions}),lt,T);
+      Object.assign(out,r,{backBlend:0,lateral:who==='A'?.75:-.75,orbit:{r:.75,ang:(who==='A'?0:Math.PI)+r.yaw*.5},yaw:r.yaw*.5+(who==='A'?Math.PI/2:-Math.PI/2)});break}
+    default:{Object.assign(out,{pose:POSE.glide,yaw:0,air:0,backBlend:0})}
+  }
+  if(!out.pose)out.pose=POSE.glide;
+  return out;
+}
+
+/* ---------- Three.js scene ---------- */
+const stage=document.getElementById('stage');
+const isMobile=Math.min(window.innerWidth,window.innerHeight)<700;
+const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(Math.min(isMobile?1.5:2,window.devicePixelRatio||1));
+renderer.outputEncoding=THREE.sRGBEncoding;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=.82;
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+stage.insertBefore(renderer.domElement,stage.firstChild);
+const scene=new THREE.Scene();
+const camera=new THREE.PerspectiveCamera(38,1,.1,400);
+const pmrem=new THREE.PMREMGenerator(renderer);const envTex=pmrem.fromScene(new THREE.RoomEnvironment(),.04).texture;scene.environment=envTex;
+scene.background=new THREE.Color(0x05080f);scene.fog=new THREE.Fog(0x05080f,80,180);
+const hemi=new THREE.HemisphereLight(0xdfe9ff,0x1a2233,.3);scene.add(hemi);
+const key=new THREE.DirectionalLight(0xffffff,.95);key.position.set(18,34,22);key.castShadow=true;key.shadow.mapSize.set(2048,2048);
+Object.assign(key.shadow.camera,{left:-34,right:34,top:20,bottom:-20,near:5,far:90});key.shadow.bias=-.0004;scene.add(key);
+const rim=new THREE.DirectionalLight(0x9fc3ff,.45);rim.position.set(-30,20,-25);scene.add(rim);
+// arena spots
+for(const [x,z] of [[-22,-10],[22,-10],[-22,10],[22,10]]){const sp=new THREE.SpotLight(0xfff2dc,.5,120,.5,.6,1);sp.position.set(x,26,z);sp.target.position.set(x*.4,0,z*.4);scene.add(sp,sp.target)}
+
+function roundedRect(w,h,r){const s=new THREE.Shape();const x=-w/2,y=-h/2;s.moveTo(x+r,y);s.lineTo(x+w-r,y);s.absarc(x+w-r,y+r,r,-Math.PI/2,0,false);s.lineTo(x+w,y+h-r);s.absarc(x+w-r,y+h-r,r,0,Math.PI/2,false);s.lineTo(x+r,y+h);s.absarc(x+r,y+h-r,r,Math.PI/2,Math.PI,false);s.lineTo(x,y+r);s.absarc(x+r,y+r,r,Math.PI,Math.PI*1.5,false);return s}
+// ice: mirror + translucent frosted sheet
+const iceShape=roundedRect(60,30,8.5);
+let markerGroup=new THREE.Group();scene.add(markerGroup);
+const useMirror=!isMobile;
+if(useMirror){const mirror=new THREE.Reflector(new THREE.ShapeGeometry(iceShape,24),{clipBias:.003,textureWidth:1024,textureHeight:1024,color:0x8899aa});mirror.rotation.x=-Math.PI/2;mirror.position.y=-.004;scene.add(mirror);const ob=mirror.onBeforeRender;mirror.onBeforeRender=function(){markerGroup.visible=false;for(const s of skaters)s.shadow.visible=false;ob.apply(this,arguments);markerGroup.visible=true;for(const s of skaters)s.shadow.visible=true}}
+const ice=new THREE.Mesh(new THREE.ShapeGeometry(iceShape,24),new THREE.MeshPhysicalMaterial({color:0xd6e4f0,roughness:.32,metalness:0,transparent:useMirror,opacity:useMirror?.8:1,envMapIntensity:.3,clearcoat:.5,clearcoatRoughness:.35}));
+ice.rotation.x=-Math.PI/2;ice.receiveShadow=true;scene.add(ice);
+// markings
+const mark=(geo,col,x,z,op)=>{const m=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:col,transparent:true,opacity:op||.3}));m.rotation.x=-Math.PI/2;m.position.set(x,.004,z);scene.add(m)};
+mark(new THREE.PlaneGeometry(.3,30),0xd94848,0,0);mark(new THREE.PlaneGeometry(.3,30),0x3b6fd1,7.6,0);mark(new THREE.PlaneGeometry(.3,30),0x3b6fd1,-7.6,0);
+mark(new THREE.PlaneGeometry(.06,30),0xd94848,26.5,0);mark(new THREE.PlaneGeometry(.06,30),0xd94848,-26.5,0);
+mark(new THREE.RingGeometry(4.4,4.55,64),0x3b6fd1,0,0);
+[[20,6.7],[20,-6.7],[-20,6.7],[-20,-6.7]].forEach(c=>mark(new THREE.RingGeometry(4.4,4.5,64),0xd94848,c[0],c[1]));
+// boards + glass
+const boardShape=roundedRect(60.6,30.6,8.8);boardShape.holes.push(roundedRect(60,30,8.5));
+const boards=new THREE.Mesh(new THREE.ExtrudeGeometry(boardShape,{depth:1.1,bevelEnabled:false,curveSegments:24}),new THREE.MeshStandardMaterial({color:0xe8ecf0,roughness:.7,envMapIntensity:.25}));
+boards.rotation.x=-Math.PI/2;boards.castShadow=true;boards.receiveShadow=true;scene.add(boards);
+const kick=new THREE.Mesh(new THREE.ExtrudeGeometry(boardShape,{depth:.22,bevelEnabled:false,curveSegments:24}),new THREE.MeshStandardMaterial({color:0xd8b12d,roughness:.5}));
+kick.rotation.x=-Math.PI/2;kick.position.y=.001;scene.add(kick);
+const glassShape=roundedRect(60.5,30.5,8.75);glassShape.holes.push(roundedRect(60.3,30.3,8.65));
+const glass=new THREE.Mesh(new THREE.ExtrudeGeometry(glassShape,{depth:1.6,bevelEnabled:false,curveSegments:24}),new THREE.MeshPhysicalMaterial({color:0xcfe3ff,transparent:true,opacity:.18,roughness:.05,metalness:0,transmission:0}));
+glass.rotation.x=-Math.PI/2;glass.position.y=1.1;scene.add(glass);
+// apron, stands, judges
+const apron=new THREE.Mesh(new THREE.PlaneGeometry(500,500),new THREE.MeshStandardMaterial({color:0x0c121b,roughness:.95,envMapIntensity:.05}));apron.rotation.x=-Math.PI/2;apron.position.y=-.03;apron.receiveShadow=true;scene.add(apron);
+const standMat=new THREE.MeshStandardMaterial({color:0x151d2b,roughness:.95,envMapIntensity:.06});
+for(let r=0;r<9;r++){const y=1.2+r*.9,d=36+r*1.6;const sideN=new THREE.Mesh(new THREE.BoxGeometry(90,.9,1.6),standMat);sideN.position.set(0,y,-d/2-6);scene.add(sideN);
+  const sideS=sideN.clone();sideS.position.z=d/2+6;scene.add(sideS);const endE=new THREE.Mesh(new THREE.BoxGeometry(1.6,.9,d+14),standMat);endE.position.set(45+r*1.6,y,0);scene.add(endE);const endW=endE.clone();endW.position.x=-45-r*1.6;scene.add(endW)}
+const table=new THREE.Mesh(new THREE.BoxGeometry(22,.9,1.2),new THREE.MeshStandardMaterial({color:0x4a2d22,roughness:.7}));table.position.set(0,.45,17.4);table.castShadow=true;scene.add(table);
+for(let i=-4;i<=4;i++){const j=new THREE.Mesh(new THREE.CylinderGeometry(.22,.22,1.3,10),new THREE.MeshStandardMaterial({color:0x2d3a52}));j.position.set(i*2.4,.75,18.4);scene.add(j)}
+
+// paths / tracings
+const pathMat=new THREE.LineBasicMaterial({color:0xd9a441,transparent:true,opacity:.35});
+const traceMat=new THREE.LineBasicMaterial({color:0x8aa3bd,transparent:true,opacity:.7});
+const pathGeo=new THREE.BufferGeometry(),traceGeo=new THREE.BufferGeometry();
+scene.add(new THREE.Line(pathGeo,pathMat),new THREE.Line(traceGeo,traceMat));
+function labelSprite(text,gold){const c=document.createElement('canvas');c.width=256;c.height=96;const g=c.getContext('2d');g.fillStyle=gold?'rgba(217,164,65,.95)':'rgba(16,24,40,.8)';const r=22;g.beginPath();g.moveTo(r,8);g.lineTo(256-r,8);g.quadraticCurveTo(256,8,256,8+r);g.lineTo(256,88-r);g.quadraticCurveTo(256,88,256-r,88);g.lineTo(r,88);g.quadraticCurveTo(0,88,0,88-r);g.lineTo(0,8+r);g.quadraticCurveTo(0,8,r,8);g.fill();g.fillStyle=gold?'#1a1208':'#fff';g.font='700 42px "Barlow Condensed", "Arial Narrow", sans-serif';g.textAlign='center';g.textBaseline='middle';g.fillText(text,128,50);const tex=new THREE.CanvasTexture(c);tex.encoding=THREE.sRGBEncoding;const sp=new THREE.Sprite(new THREE.SpriteMaterial({map:tex,depthTest:false,transparent:true}));sp.scale.set(2.1,.78,1);return sp}
+function updateMarkers(){
+  scene.remove(markerGroup);markerGroup=new THREE.Group();
+  for(const it of TL.items){const sp=labelSprite(it.el.code,it.el.extra);sp.position.set(it.el.x,2.5,it.el.z);markerGroup.add(sp);
+    const disc=new THREE.Mesh(new THREE.RingGeometry(.5,.62,32),new THREE.MeshBasicMaterial({color:it.el.extra?0xd9a441:0x33415a,transparent:true,opacity:.55}));disc.rotation.x=-Math.PI/2;disc.position.set(it.el.x,.006,it.el.z);markerGroup.add(disc)}
+  scene.add(markerGroup);
+  const arr=new Float32Array(TL.samples.length*3);TL.samples.forEach((p,i)=>{arr[i*3]=p.x;arr[i*3+1]=.02;arr[i*3+2]=p.z});pathGeo.setAttribute('position',new THREE.BufferAttribute(arr,3));
+}
+function updateTrace(t){const n=Math.max(2,Math.floor(TL.samples.length*t/state.duration));const arr=new Float32Array(n*3);for(let i=0;i<n;i++){const p=TL.samples[i];arr[i*3]=p.x;arr[i*3+1]=.012;arr[i*3+2]=p.z}traceGeo.setAttribute('position',new THREE.BufferAttribute(arr,3));traceGeo.setDrawRange(0,n)}
+
+/* ---------- Skaters ---------- */
+const skaters=[];// {root,lean,spin,model,rig,shadow,who}
+function makeSkater(gltfScene,who,colors){
+  const root=new THREE.Group();scene.add(root);
+  const lean=new THREE.Group();root.add(lean);
+  const spin=new THREE.Group();lean.add(spin);
+  const model=gltfScene;spin.add(model);const sc=who==='A'?.95:1.03;model.scale.setScalar(sc);
+  model.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=false;o.frustumCulled=false;
+    if(/Joints/.test(o.material.name))o.material=new THREE.MeshStandardMaterial({color:colors.joint,metalness:.8,roughness:.28,skinning:true,envMapIntensity:1.0});
+    else o.material=new THREE.MeshStandardMaterial({color:colors.body,metalness:.15,roughness:.5,skinning:true,envMapIntensity:.45})}});
+  const rig=R.makeRig(model,{bladeOffset:.015});
+  // boots + blades on each foot
+  for(const side of ['Left','Right']){const foot=rig.b[side+'Foot'],toe=rig.b[side+'ToeBase'];if(!foot||!toe)continue;
+    model.updateMatrixWorld(true);const a=new THREE.Vector3(),b=new THREE.Vector3();foot.getWorldPosition(a);toe.getWorldPosition(b);
+    const g=new THREE.Group();const mid=a.clone().lerp(b,.5);g.position.copy(mid);g.position.y=Math.min(a.y,b.y)+.065*sc;g.lookAt(mid.x+(b.x-a.x),g.position.y,mid.z+(b.z-a.z));
+    const boot=new THREE.Mesh(new THREE.BoxGeometry(.085*sc,.15*sc,.27*sc),new THREE.MeshStandardMaterial({color:colors.boot,roughness:.5}));boot.castShadow=true;boot.position.set(0,0,.01);g.add(boot);
+    const heel=new THREE.Mesh(new THREE.BoxGeometry(.08*sc,.05*sc,.09*sc),new THREE.MeshStandardMaterial({color:colors.boot,roughness:.5}));heel.position.set(0,-.09*sc,-.08);g.add(heel);
+    const blade=new THREE.Mesh(new THREE.BoxGeometry(.012,.03,.31*sc),new THREE.MeshStandardMaterial({color:0xdfe6ee,metalness:1,roughness:.15}));blade.position.set(0,-.1*sc,.0);g.add(blade);
+    const pickM=new THREE.Mesh(new THREE.ConeGeometry(.016,.04,6),blade.material);pickM.rotation.x=Math.PI/2;pickM.position.set(0,-.09*sc,.17*sc);g.add(pickM);
+    scene.add(g);foot.attach(g);}
+  const shadow=new THREE.Mesh(new THREE.CircleGeometry(.42,24),new THREE.MeshBasicMaterial({color:0x000000,transparent:true,opacity:.22,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.position.y=.009;scene.add(shadow);
+  const s={root,lean,spin,model,rig,shadow,who,headingSmooth:0,backSmooth:0,dirPrev:{x:1,z:0}};skaters.push(s);return s;
+}
+function loadSkaters(){
+  const loader=new THREE.GLTFLoader();
+  loader.load('models/skater.glb',g=>{
+    makeSkater(g.scene,'A',{body:0x1b2a4a,joint:0xc9962b,boot:0xf3efe8});
+    // partner: load a second copy
+    loader.load('models/skater.glb',g2=>{const B=makeSkater(g2.scene,'B',{body:0x2a2f3a,joint:0xc9962b,boot:0x111214});B.root.visible=false;state.ready=true;document.getElementById('loading').hidden=true});
+  },undefined,err=>{document.getElementById('loading').textContent='Could not load the skater model.'});
+}
+loadSkaters();
+
+/* ---------- Camera ---------- */
+const camState={theta:.9,phi:1.05,radius:9,target:new THREE.Vector3(),pos:new THREE.Vector3(0,6,20)};
+let drag=null;const dom=renderer.domElement;
+dom.addEventListener('pointerdown',e=>{if(state.cam!=='free')return;drag={x:e.clientX,y:e.clientY};dom.setPointerCapture(e.pointerId)});
+dom.addEventListener('pointermove',e=>{if(!drag)return;camState.theta-=(e.clientX-drag.x)*.006;camState.phi=clamp(camState.phi-(e.clientY-drag.y)*.005,.12,1.5);drag={x:e.clientX,y:e.clientY}});
+dom.addEventListener('pointerup',()=>drag=null);dom.addEventListener('pointercancel',()=>drag=null);
+dom.addEventListener('wheel',e=>{if(state.cam!=='free')return;e.preventDefault();camState.radius=clamp(camState.radius*(1+e.deltaY*.001),2.5,60)},{passive:false});
+let pinch=null;dom.addEventListener('touchstart',e=>{if(e.touches.length===2)pinch=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY)},{passive:true});
+dom.addEventListener('touchmove',e=>{if(pinch&&e.touches.length===2&&state.cam==='free'){const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);camState.radius=clamp(camState.radius*pinch/d,2.5,60);pinch=d}},{passive:true});
+dom.addEventListener('touchend',()=>pinch=null);
+document.querySelectorAll('.chip').forEach(b=>b.addEventListener('click',()=>{state.cam=b.dataset.cam;document.querySelectorAll('.chip').forEach(c=>c.setAttribute('aria-pressed',c===b));document.getElementById('hint').style.display=state.cam==='free'?'':'none'}));
+document.getElementById('hint').style.display='none';
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;if(!w||!h)return;renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}
+new ResizeObserver(resize).observe(stage);resize();
+
+/* ---------- Playback & replay ---------- */
+const audioEl=new Audio();audioEl.preload='auto';
+const audioT=t=>state.trimStart+t;
+function seek(t){state.time=clamp(t,0,state.duration);if(state.audio)audioEl.currentTime=audioT(state.time)}
+function setPlayIcon(){const b=document.getElementById('play');b.textContent=state.playing?'❚❚':'▶';b.setAttribute('aria-label',state.playing?'Pause':'Play')}
+function play(){if(state.time>=state.duration-.05)state.time=0;state.playing=true;if(state.audio){audioEl.currentTime=audioT(state.time);audioEl.playbackRate=state.rate;audioEl.play().catch(()=>{})}setPlayIcon()}
+function pause(){state.playing=false;if(state.audio)audioEl.pause();setPlayIcon()}
+document.getElementById('play').addEventListener('click',()=>state.playing?pause():play());
+document.getElementById('stop').addEventListener('click',()=>{pause();seek(0);state.replay=null});
+document.getElementById('rate').addEventListener('change',e=>{state.rate=+e.target.value;audioEl.playbackRate=state.rate});
+document.getElementById('autoReplay').addEventListener('change',e=>state.replayOn=e.target.checked);
+document.getElementById('vol').addEventListener('input',e=>audioEl.volume=+e.target.value);
+let lastFrame=performance.now();
+function advance(dt){
+  if(!state.playing)return;
+  if(state.replay){ // slow-motion replay of the jump just landed, music muted
+    const r=state.replay;r.t+=dt*.3;if(r.t>=r.t1){state.replay=null;if(state.audio){audioEl.muted=false;audioEl.currentTime=audioT(state.time);audioEl.play().catch(()=>{})}}
+    return}
+  if(state.audio){state.time=clamp(audioEl.currentTime-state.trimStart,0,state.duration);if(audioEl.ended||state.time>=state.duration){state.time=state.duration;pause()}}
+  else{state.time+=dt*state.rate;if(state.time>=state.duration){state.time=state.duration;pause()}}
+  // trigger replay after a jump lands
+  if(state.replayOn&&state.rate===1){for(const it of TL.items){const k=it.info.kind;if(k!=='jump'&&k!=='throw'&&k!=='twist')continue;if(!it._rep&&state.time>=it.t1&&state.time<it.t1+.3){it._rep=true;state.replay={t:it.t0-.3,t0:it.t0-.3,t1:it.t1+.2,item:it};if(state.audio)audioEl.muted=true;break}}}
+}
+function resetReplays(){for(const it of TL.items)it._rep=state.time>it.t1}
+
+/* ---------- Frame ---------- */
+let hudKey='';
+function frame(now){
+  const dt=Math.min(.1,(now-lastFrame)/1000);lastFrame=now;
+  advance(dt);
+  const t=state.replay?state.replay.t:state.time;
+  if(state.ready){
+    const pairs=state.disc==='P';skaters[1].root.visible=pairs;
+    let focus=null;
+    for(const s of skaters){if(s.who==='B'&&!pairs)continue;
+      const smp=sampleSkater(t,s.who);const loc=smp.loc;
+      // heading from path direction
+      let dir=loc.dir;if(Math.abs(dir.x)+Math.abs(dir.z)>1e-6)s.dirPrev=dir;else dir=s.dirPrev;
+      let heading=Math.atan2(s.dirPrev.x,s.dirPrev.z);
+      if(loc.speed===0&&!smp.item)heading=0;
+      let d=heading-s.headingSmooth;d=Math.atan2(Math.sin(d),Math.cos(d));const k=state.playing?Math.min(1,dt*7):1;s.headingSmooth+=d*k;
+      s.backSmooth+=((smp.backBlend||0)-s.backSmooth)*Math.min(1,state.playing?dt*5:1);
+      // position: path + lateral offset (pairs) or orbit
+      let px=loc.x,pz=loc.z;const lat=smp.lateral||0;
+      const nrm={x:-s.dirPrev.z,z:s.dirPrev.x};
+      if(smp.orbit){px=loc.x+Math.cos(smp.orbit.ang)*smp.orbit.r;pz=loc.z+Math.sin(smp.orbit.ang)*smp.orbit.r;if(smp.item&&smp.item.info.kind==='deathspiral')heading=smp.orbit.ang+Math.PI/2+Math.PI}
+      else{px+=nrm.x*lat;pz+=nrm.z*lat}
+      s.root.position.set(px,0,pz);
+      const yawBase=smp.orbit&&smp.item&&smp.item.info.kind==='deathspiral'?heading:s.headingSmooth;
+      s.root.rotation.y=yawBase+Math.PI*s.backSmooth;
+      s.spin.rotation.y=smp.yaw||0;
+      // lean into curves + element roll
+      const v=loc.speed||0,kap=loc.kappa||0;const leanCurve=clamp(Math.atan(v*v*kap/9.81)*.9,-.4,.4)*(smp.item?.35:1);
+      const rollT=(smp.roll||0)+(-leanCurve*(1-2*s.backSmooth));
+      s.lean.rotation.z+= (rollT-s.lean.rotation.z)*Math.min(1,state.playing?dt*8:1);
+      R.applyPose(s.rig,smp.pose,smp.air||0);
+      s.shadow.position.set(px,.009,pz);const a=smp.air||0;s.shadow.scale.setScalar(1-Math.min(.6,a*.3));s.shadow.material.opacity=.22*(1-Math.min(.7,a*.3));
+      if(s.who==='A')focus={x:px,z:pz,air:a,smp};
+    }
+    updateTrace(state.time);
+    // camera
+    const f=focus;const target=new THREE.Vector3(f.x,.95+f.air*.5,f.z);camState.target.lerp(target,Math.min(1,state.playing?dt*5:1));
+    let want;
+    if(state.cam==='judge')want=new THREE.Vector3(f.x*.15,2.3,21);
+    else if(state.cam==='overhead')want=new THREE.Vector3(0,50,0);
+    else if(state.cam==='low')want=new THREE.Vector3(f.x+3.2,.5,f.z+5.2);
+    else if(state.cam==='free')want=new THREE.Vector3(camState.target.x+camState.radius*Math.sin(camState.phi)*Math.sin(camState.theta),camState.target.y+camState.radius*Math.cos(camState.phi),camState.target.z+camState.radius*Math.sin(camState.phi)*Math.cos(camState.theta));
+    else{const zoom=state.replay?.62:1;const far=state.disc==='P'?1.25:1;want=new THREE.Vector3(f.x+2.6*zoom*far,2.4*zoom+.9,f.z+6.8*zoom*far)}
+    camState.pos.lerp(want,state.cam==='free'?1:Math.min(1,state.playing?dt*3:1));
+    camera.position.copy(camState.pos);
+    if(state.cam==='overhead'){camera.up.set(0,0,-1);camera.lookAt(0,0,0)}else{camera.up.set(0,1,0);camera.lookAt(camState.target)}
+    camera.fov=state.cam==='overhead'?44:state.cam==='judge'?clamp(34-Math.hypot(f.x,f.z-21)*.3,14,32):state.cam==='low'?30:34;camera.updateProjectionMatrix();
+    renderer.render(scene,camera);
+    updateHUD(f.smp,t);
+  }
+  requestAnimationFrame(frame);
+}
+function updateHUD(s,t){
+  document.getElementById('clock').textContent=fmt(state.time)+' / '+fmtS(state.duration);
+  document.getElementById('tdisp').textContent=fmt(state.time);
+  let label,desc,phase;
+  if(s.item){const it=s.item,inf=it.info;label=it.el.code;const idx=TL.items.indexOf(it)+1;
+    if(inf.kind==='jump'){const revs=inf.parts.reduce((a,p)=>a+p.revs+(p.type==='A'?.5:0),0);phase=s.inAir?'In the air':'Jump pass';desc=cap(inf.name)+' · '+revs+' rotations'+(it.bonus?' · second-half ×1.1':'')+' · base value '+inf.bv.toFixed(2)}
+    else if(inf.kind==='spin'){phase='Spin';desc=cap(inf.name)+(inf.change?' · change of foot':'')+(inf.fly?' · flying entry':'')+' · base value '+inf.bv.toFixed(2)}
+    else if(inf.kind==='steps'){phase='Step sequence';desc=(s.turn?cap(s.turn)+' · ':'')+'turns on both feet, full ice surface, two twizzles · base value '+inf.bv.toFixed(2)}
+    else if(inf.kind==='choreo'){phase='Choreo sequence';desc=(s.turn?cap(s.turn)+' · ':'')+'spiral, spread eagle, Ina Bauer, lunge'}
+    else if(inf.kind==='throw'){phase=s.inAir?'In the air':'Throw';desc=cap(inf.name)+' · base value '+inf.bv.toFixed(2)}
+    else if(inf.kind==='twist'){phase='Twist lift';desc=cap(inf.name)+' · base value '+inf.bv.toFixed(2)}
+    else if(inf.kind==='lift'){phase='Lift';desc=cap(inf.name)+' · 1½ rotations · base value '+inf.bv.toFixed(2)}
+    else if(inf.kind==='deathspiral'){phase='Death spiral';desc=cap(inf.name)+' · base value '+inf.bv.toFixed(2)}
+    else if(inf.kind==='pairspin'){phase='Pair spin';desc=cap(inf.name)+' · base value '+inf.bv.toFixed(2)}
+    else {phase=it.el.extra?'Artistic fill':'Artistic move';desc=cap(inf.name)+' · connecting movement'}
+  } else {label=s.label;desc=s.desc;phase=s.phase}
+  if(state.replay)phase='Replay · ¼ speed';
+  const key=label+desc+phase;if(key!==hudKey){hudKey=key;document.getElementById('hudEl').textContent=label;document.getElementById('hudDesc').textContent=desc;const p=document.getElementById('hudPhase');p.textContent=phase;p.classList.toggle('replay',!!state.replay)}
+  const activeId=s.item?s.item.el.id:-1;
+  document.querySelectorAll('#elBody tr').forEach(tr=>{const on=+tr.dataset.id===activeId;if(tr.classList.contains('active')!==on)tr.classList.toggle('active',on)});
+  drawPlayhead();
+}
+
+/* ---------- Music ---------- */
+const musicInput=document.getElementById('music'),drop=document.getElementById('drop');
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over')});drop.addEventListener('dragleave',()=>drop.classList.remove('over'));
+drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)loadMusic(f)});
+musicInput.addEventListener('change',e=>{const f=e.target.files[0];if(f)loadMusic(f)});
+async function loadMusic(f){
+  document.getElementById('musicName').textContent='Decoding '+f.name+'…';
+  try{
+    const buf=await f.arrayBuffer();const ctx=new (window.AudioContext||window.webkitAudioContext)();const ab=await ctx.decodeAudioData(buf.slice(0));
+    const ch=ab.getChannelData(0),N=1200,step=Math.floor(ch.length/N),peaks=new Float32Array(N);
+    for(let i=0;i<N;i++){let m=0;for(let j=0;j<step;j+=8){const v=Math.abs(ch[i*step+j]);if(v>m)m=v}peaks[i]=m}
+    state.peaks=peaks;state.musicDur=ab.duration;state.trimStart=0;state.trimEnd=ab.duration;
+    const bpm=estimateTempo(ch,ab.sampleRate);state.bpm=bpm.bpm;state.beat0=bpm.offset;
+    audioEl.src=URL.createObjectURL(f);audioEl.volume=+document.getElementById('vol').value;state.audio=f;ctx.close&&ctx.close();
+    document.getElementById('mTrack').textContent=f.name+' · '+fmtS(ab.duration);
+    document.getElementById('mBpm').textContent=state.bpm?Math.round(state.bpm)+' BPM':'not detected';
+    const ts=document.getElementById('trimStart'),te=document.getElementById('trimEnd');ts.max=te.max=ab.duration.toFixed(1);ts.value=0;te.value=ab.duration.toFixed(1);
+    applyTrim();
+  }catch(err){document.getElementById('musicName').textContent='Could not decode that file. Try an MP3, M4A or WAV.'}
+}
+function applyTrim(){
+  const ts=document.getElementById('trimStart'),te=document.getElementById('trimEnd');
+  state.trimStart=+ts.value;state.trimEnd=Math.max(state.trimStart+20,+te.value);te.value=state.trimEnd.toFixed(1);
+  document.getElementById('trimStartV').textContent=fmt(state.trimStart);document.getElementById('trimEndV').textContent=fmt(state.trimEnd);
+  const len=state.trimEnd-state.trimStart;state.duration=Math.round(len*10)/10;
+  const target=LEN[state.seg][state.level];const diff=state.duration-target;
+  document.getElementById('mLen').textContent=fmtS(state.duration);
+  const rule=document.getElementById('mRule');rule.textContent=Math.abs(diff)<=10?'OK · '+fmtS(target)+' ±10 s':(diff>0?'+':'')+Math.round(diff)+' s vs '+fmtS(target)+' ±10 s';rule.style.color=Math.abs(diff)<=10?'var(--ok)':'var(--bad)';
+  document.getElementById('musicName').textContent=state.audio.name+' · program '+fmtS(state.duration)+(state.bpm?' · '+Math.round(state.bpm)+' BPM':'');
+  for(const el of state.elements)el.t=Math.min(el.t,state.duration-3);
+  rebuild();seek(Math.min(state.time,state.duration));
+}
+document.getElementById('trimStart').addEventListener('input',applyTrim);document.getElementById('trimEnd').addEventListener('input',applyTrim);
+// tempo: onset-energy autocorrelation, 60-200 BPM
+function estimateTempo(ch,sr){
+  const hop=Math.floor(sr/100);const n=Math.floor(ch.length/hop);const env=new Float32Array(n);
+  for(let i=0;i<n;i++){let e=0;const o=i*hop;for(let j=0;j<hop;j+=4)e+=ch[o+j]*ch[o+j];env[i]=Math.sqrt(e/(hop/4))}
+  const on=new Float32Array(n);for(let i=1;i<n;i++)on[i]=Math.max(0,env[i]-env[i-1]);
+  let best=0,bestLag=0;const minLag=Math.round(100*60/200),maxLag=Math.round(100*60/60);
+  for(let lag=minLag;lag<=maxLag;lag++){let s=0;for(let i=lag;i<n;i++)s+=on[i]*on[i-lag];s/= (n-lag);if(s>best){best=s;bestLag=lag}}
+  if(!bestLag)return {bpm:0,offset:0};
+  const bpm=6000/bestLag;
+  // beat phase: best offset within one period
+  let bo=0,bs=-1;for(let off=0;off<bestLag;off++){let s=0;for(let i=off;i<n;i+=bestLag)s+=on[i];if(s>bs){bs=s;bo=off}}
+  return {bpm,offset:bo/100};
+}
+function beatTimes(){if(!state.bpm)return [];const per=60/state.bpm;const out=[];let b=state.beat0-state.trimStart;while(b<0)b+=per;for(;b<state.duration;b+=per)out.push(b);return out}
+function snapT(t){if(!state.snap||!state.bpm)return t;const per=60/state.bpm;let b=state.beat0-state.trimStart;const k=Math.round((t-b)/per);return clamp(b+k*per,0,state.duration-3)}
+
+/* ---------- Waveform / scrubber ---------- */
+const scrub=document.getElementById('scrub'),wave=document.getElementById('wave');
+function cssVar(n){return getComputedStyle(document.documentElement).getPropertyValue(n).trim()}
+function drawWave(){
+  const W=scrub.clientWidth,H=scrub.clientHeight;if(!W)return;const dpr=Math.min(2,window.devicePixelRatio||1);wave.width=W*dpr;wave.height=H*dpr;const g=wave.getContext('2d');g.setTransform(dpr,0,0,dpr,0,0);g.clearRect(0,0,W,H);
+  const muted=cssVar('--muted'),accent=cssVar('--accent'),line=cssVar('--line'),fg=cssVar('--fg');
+  g.fillStyle=line;g.globalAlpha=.35;g.fillRect(W/2,0,W/2,H);g.globalAlpha=1;
+  const mid=H*.6;
+  if(state.peaks){g.fillStyle=muted;g.globalAlpha=.7;const n=state.peaks.length;const d=state.musicDur||1;for(let i=0;i<n;i++){const ta=i/n*d-state.trimStart;if(ta<0||ta>state.duration)continue;const x=ta/state.duration*W;const h=Math.max(1,state.peaks[i]*(H*.5));g.fillRect(x,mid-h/2,Math.max(1,W/n*d/state.duration-.3),h)}g.globalAlpha=1}
+  else{g.strokeStyle=line;g.lineWidth=1;g.beginPath();g.moveTo(0,mid);g.lineTo(W,mid);g.stroke()}
+  // beat ticks
+  if(state.bpm){g.fillStyle=accent;g.globalAlpha=.35;for(const b of beatTimes()){const x=b/state.duration*W;g.fillRect(x,H-22,1,8)}g.globalAlpha=1}
+  g.fillStyle=muted;g.font='600 10px Barlow, system-ui, sans-serif';g.textAlign='left';
+  for(let s=0;s<=state.duration;s+=15){const x=s/state.duration*W;g.fillRect(x,H-14,1,14);if(s%30===0)g.fillText(fmtS(s),x+3,H-3)}
+  for(const it of TL.items){const x0=it.t0/state.duration*W,x1=it.t1/state.duration*W;const kind=it.info.kind;g.fillStyle=it.el.extra?accent:(kind==='jump'||kind==='throw'||kind==='twist'?fg:muted);g.globalAlpha=kind==='jump'?.9:.55;g.fillRect(x0,6,Math.max(3,x1-x0),8);g.globalAlpha=1;g.fillStyle=fg;g.font='700 10px Barlow, system-ui, sans-serif';if(x1-x0>26||kind==='jump'||kind==='throw')g.fillText(it.el.code,x0,24)}
+  drawPlayhead();
+}
+let ph=null;
+function drawPlayhead(){if(!ph){ph=document.createElement('div');ph.style.cssText='position:absolute;top:0;bottom:0;width:2px;background:var(--accent);pointer-events:none;left:0';scrub.appendChild(ph)}ph.style.left=(state.time/state.duration*100)+'%'}
+function scrubTo(e){const r=scrub.getBoundingClientRect();const u=clamp((e.clientX-r.left)/r.width,0,1);seek(u*state.duration);state.replay=null;resetReplays()}
+let scrubbing=false;
+scrub.addEventListener('pointerdown',e=>{scrubbing=true;scrub.setPointerCapture(e.pointerId);scrubTo(e)});
+scrub.addEventListener('pointermove',e=>{if(scrubbing)scrubTo(e)});
+scrub.addEventListener('pointerup',()=>scrubbing=false);scrub.addEventListener('pointercancel',()=>scrubbing=false);
+new ResizeObserver(()=>drawWave()).observe(scrub);
+
+/* ---------- Program table ---------- */
+function updateStats(){const items=TL.items.filter(i=>!i.el.extra);const bv=items.reduce((a,i)=>a+(i.info.bv||0)*(i.bonus?1.1:1),0);document.getElementById('statBV').textContent=bv.toFixed(2);document.getElementById('statEl').textContent=items.length;document.getElementById('statLen').textContent=fmtS(state.duration)}
+function renderTable(){
+  const tb=document.getElementById('elBody');tb.innerHTML='';
+  const jumps=TL.items.filter(i=>['jump','throw'].includes(i.info.kind));jumps.forEach(j=>j.bonus=false);
+  const half=state.duration/2;const second=jumps.filter(j=>j.el.t>=half);
+  if(state.seg==='SP'){if(second.length)second[second.length-1].bonus=true}else second.slice(-3).forEach(j=>j.bonus=true);
+  TL.items.forEach((it,i)=>{
+    const tr=document.createElement('tr');tr.dataset.id=it.el.id;if(it.el.extra)tr.className='extra';
+    tr.innerHTML=`<td class="num">${i+1}</td>
+      <td><input type="text" value="${fmtS(it.el.t)}" data-f="t" aria-label="Time" style="width:70px" inputmode="numeric"></td>
+      <td><input type="text" class="code" list="codes" value="${it.el.code}" data-f="code" aria-label="Element code" style="width:118px"></td>
+      <td><span class="kind">${cap(it.info.name)}${it.bonus?'<span class="bonus">×1.1</span>':''}</span></td>
+      <td class="bv">${it.info.bv?it.info.bv.toFixed(2):'—'}</td>
+      <td><span class="kind">${it.el.x.toFixed(0)} m, ${it.el.z.toFixed(0)} m</span></td>
+      <td><button class="tbtn" aria-label="Remove element" data-rm="${it.el.id}">✕</button></td>`;
+    tr.addEventListener('click',e=>{if(e.target.tagName==='INPUT'||e.target.tagName==='BUTTON')return;seek(it.t0);state.replay=null;resetReplays()});
+    tr.querySelectorAll('input').forEach(inp=>inp.addEventListener('change',()=>{if(inp.dataset.f==='t')it.el.t=snapT(clamp(parseT(inp.value),0,state.duration-3));else it.el.code=inp.value.trim();rebuild()}));
+    tr.querySelector('[data-rm]').addEventListener('click',()=>{state.elements=state.elements.filter(e=>e.id!==it.el.id);rebuild()});
+    tb.appendChild(tr);
+  });
+  const dl=document.getElementById('codes');dl.innerHTML=(CODE_LISTS[state.disc==='P'?'P':'S']).map(c=>`<option value="${c}">`).join('');
+  document.getElementById('codeHelp').textContent=state.disc==='P'
+    ?'ISU codes. Pairs: twist 3Tw4, throws 3LoTh/3FTh, lifts 3Li4 (group 3 hip), 5ALi4/5BLi4/5RLi4 (group 5), death spirals FiDs4/BoDs4, pair spins PCoSp4; side-by-side jumps and spins use singles codes (3T, 3Lz+2T, FCSp4). Time is the moment of takeoff. Click a row to jump the skaters to that element.'
+    :'ISU codes. Jumps as revs + letter, quads included: 4T 4S 4Lo 4F 4Lz 4A, combos 4Lz+3T, 3Lz+1Eu+3S. Spins by position: FCSp4 flying camel, LSp4 layback (level 4 adds a Biellmann), CCoSp4 change-foot combination. StSq4 step sequence, ChSq1 choreo sequence. Artistic: Spiral, SpreadEagle, InaBauer, Hydroblade, Cantilever, Lunge. Time is the moment of takeoff or spin entry. Click a row to jump the skater to that element.';
+}
+document.getElementById('addEl').addEventListener('click',()=>{const last=state.elements[state.elements.length-1];const t=last?Math.min(state.duration-10,last.t+16):10;state.elements.push(mk(snapT(t),state.disc==='P'?'3T':'3T',(Math.random()*36-18)|0,(Math.random()*18-9)|0));rebuild()});
+document.getElementById('fill').addEventListener('click',()=>{
+  const cyc=['Spiral','SpreadEagle','InaBauer','Lunge'];let k=0;const adds=[];
+  const items=TL.items;let prevEnd=Math.min(2,state.duration*.2);
+  for(let i=0;i<=items.length;i++){const next=i<items.length?items[i].t0:state.duration-1.5;const gap=next-prevEnd;if(gap>14){const t=prevEnd+gap/2-2.5;const a=locate(t);adds.push(mk(t,cyc[k++%cyc.length],clamp(a.x,-24,24),clamp(a.z,-11,11),true))}if(i<items.length)prevEnd=items[i].t1}
+  state.elements.push(...adds);rebuild();
+});
+document.getElementById('sample').addEventListener('click',loadSample);
+document.getElementById('snap').addEventListener('change',e=>state.snap=e.target.checked);
+function setSeg(seg){state.seg=seg;document.getElementById('segSP').setAttribute('aria-pressed',seg==='SP');document.getElementById('segFS').setAttribute('aria-pressed',seg==='FS');if(!state.audio)state.duration=LEN[state.seg][state.level];else applyTrim();loadSample()}
+document.getElementById('segSP').addEventListener('click',()=>setSeg('SP'));document.getElementById('segFS').addEventListener('click',()=>setSeg('FS'));
+['disc','level'].forEach(id=>document.getElementById(id).addEventListener('change',e=>{state[id]=e.target.value;if(!state.audio)state.duration=LEN[state.seg][state.level];else applyTrim();loadSample()}));
+
+/* ---------- Rink map ---------- */
+const svg=document.getElementById('mapSvg');
+function renderMap(){
+  let h=`<rect x="-30.3" y="-15.3" width="60.6" height="30.6" rx="8.8" fill="#c9961f"/>
+  <rect x="-30" y="-15" width="60" height="30" rx="8.5" fill="#edf4fa" stroke="#a7b7c6" stroke-width=".15"/>
+  <line x1="0" y1="-15" x2="0" y2="15" stroke="#d94848" stroke-width=".25" opacity=".45"/>
+  <line x1="7.6" y1="-15" x2="7.6" y2="15" stroke="#3b6fd1" stroke-width=".25" opacity=".4"/><line x1="-7.6" y1="-15" x2="-7.6" y2="15" stroke="#3b6fd1" stroke-width=".25" opacity=".4"/>
+  <circle cx="0" cy="0" r="4.5" fill="none" stroke="#3b6fd1" stroke-width=".12" opacity=".4"/>
+  <text x="0" y="16.2" font-size="1.1" text-anchor="middle" fill="currentColor" opacity=".7" font-family="Barlow, system-ui, sans-serif">JUDGES</text>`;
+  const pts=TL.samples.map(p=>p.x.toFixed(2)+','+p.z.toFixed(2)).join(' ');
+  h+=`<polyline points="${pts}" fill="none" stroke="#d9a441" stroke-width=".28" stroke-linejoin="round" opacity=".95"/>`;
+  TL.items.forEach((it,i)=>{h+=`<g class="marker" data-id="${it.el.id}" transform="translate(${it.el.x} ${it.el.z})"><circle r="1.35" fill="${it.el.extra?'#d9a441':'#1d2634'}" stroke="#fff" stroke-width=".18"/><text y=".4" font-size="1.05" text-anchor="middle" fill="#fff" font-weight="700" font-family="Barlow, system-ui, sans-serif">${i+1}</text><text y="2.9" font-size="1.05" text-anchor="middle" fill="currentColor" font-weight="700" font-family="Barlow, system-ui, sans-serif">${it.el.code}</text></g>`});
+  svg.innerHTML=h;
+  let dragging=null;
+  const toSvg=e=>{const pt=svg.createSVGPoint();pt.x=e.clientX;pt.y=e.clientY;return pt.matrixTransform(svg.getScreenCTM().inverse())};
+  svg.querySelectorAll('.marker').forEach(gEl=>{gEl.addEventListener('pointerdown',e=>{dragging=state.elements.find(x=>x.id===+gEl.dataset.id);svg.setPointerCapture(e.pointerId);e.preventDefault()})});
+  svg.onpointermove=e=>{if(!dragging)return;const p=toSvg(e);dragging.x=clamp(Math.round(p.x*2)/2,-27,27);dragging.z=clamp(Math.round(p.y*2)/2,-12.5,12.5);const g=svg.querySelector(`.marker[data-id="${dragging.id}"]`);if(g)g.setAttribute('transform',`translate(${dragging.x} ${dragging.z})`)};
+  svg.onpointerup=svg.onpointercancel=()=>{if(dragging){dragging=null;rebuild()}};
+}
+
+/* ---------- Rules ---------- */
+function renderRules(){
+  const out=[];const items=TL.items.filter(i=>!i.el.extra);const R_=(ok,label,note)=>out.push({ok,label,note});
+  const target=LEN[state.seg][state.level];
+  R_(Math.abs(state.duration-target)<=10?'ok':'bad','Program length '+fmtS(target)+' ± 10 s','Current: '+fmtS(state.duration)+(state.audio?' (from the trimmed track)':''));
+  const sen=state.level==='senior',jun=state.level==='junior',nov=state.level==='novice';
+  if(state.disc==='P'){
+    const lifts=items.filter(i=>i.info.kind==='lift'&&!i.info.choreo),chl=items.filter(i=>i.info.kind==='lift'&&i.info.choreo),tw=items.filter(i=>i.info.kind==='twist'),th=items.filter(i=>i.info.kind==='throw'),ds=items.filter(i=>i.info.kind==='deathspiral'),ps=items.filter(i=>i.info.kind==='pairspin'),jumps=items.filter(i=>i.info.kind==='jump'),steps=items.filter(i=>i.info.kind==='steps'),chs=items.filter(i=>i.info.kind==='choreo');
+    if(state.seg==='SP'){
+      const hip=lifts.find(l=>l.info.group==='3');R_(hip?'ok':'bad','a) Hip lift take-off (Group 3)',hip?hip.el.code:'Add 3Li4');
+      const t=tw.find(x=>x.info.revs>=2&&x.info.revs<=3);R_(t?'ok':'bad','b) Double or triple twist lift',t?t.el.code:'Missing');
+      const okTh=th.find(x=>x.info.revs>=2&&x.info.revs<=3&&(!jun||x.info.type==='Lo'));R_(okTh?'ok':'bad',jun?'c) Double or triple loop throw':'c) Double or triple throw jump',okTh?okTh.el.code:'Missing');
+      const sj=jumps.find(j=>j.info.parts.length===1&&j.info.parts[0].revs>=2&&j.info.parts[0].revs<=3&&(!jun||(j.info.parts[0].revs===2&&['Lz','A'].includes(j.info.parts[0].type))));R_(sj?'ok':'bad',jun?'d) Double Lutz or double Axel solo jump':'d) Double or triple solo jump (side by side)',sj?sj.el.code:'Missing');
+      const pc=ps.find(p=>p.info.combo&&!p.info.choreo);R_(pc?'ok':'bad','e) Pair spin combination (8 revolutions)',pc?pc.el.code:'Missing (PCoSp)');
+      const fi=ds.find(d=>d.info.edge==='Fi');R_(fi?'ok':'bad','f) Forward inside death spiral',fi?fi.el.code:'Missing (FiDs)');
+      R_(steps.length===1?'ok':'bad','g) Step sequence using the full ice surface',steps.length?steps[0].el.code:'Missing');
+      R_(items.length===7?'ok':'bad','Exactly seven elements','Listed: '+items.length);
+    } else {
+      const groups=new Set(lifts.map(l=>l.info.group[0]));R_(lifts.length<=2&&lifts.length>0&&groups.size===lifts.length?'ok':'bad','Up to two lifts, from different groups, plus one choreographic lift','Lifts: '+(lifts.map(l=>l.el.code).join(', ')||'none')+' · choreo lift: '+chl.length);
+      R_(tw.length===1?'ok':'bad','One twist lift','Listed: '+tw.length);
+      R_(th.length<=2&&new Set(th.map(x=>x.info.type)).size===th.length?'ok':'bad','Up to two different throw jumps','Listed: '+(th.map(x=>x.el.code).join(', ')||'none'));
+      const solo=jumps.filter(j=>j.info.parts.length===1),combo=jumps.filter(j=>j.info.parts.length>1);
+      R_(solo.length<=1?'ok':'bad','One solo jump','Listed: '+solo.length);R_(combo.length<=1?'ok':'bad','One jump combination or sequence (two jumps)','Listed: '+combo.length);
+      R_(ps.filter(p=>!p.info.choreo).length<=1&&ps.filter(p=>p.info.choreo).length<=1?'ok':'bad','One pair spin combination and one choreographic pair spin','Listed: '+(ps.map(p=>p.el.code).join(', ')||'none'));
+      R_(ds.length===1?'ok':'bad','One death spiral (different from the short program)','Listed: '+(ds.map(d=>d.el.code).join(', ')||'none'));
+      R_(chs.length===1?'ok':'bad','One choreographic sequence',chs.length?'Present':'Missing');
+    }
+  } else if(state.seg==='SP'){
+    const W=state.disc==='W';const jumps=items.filter(i=>i.info.kind==='jump'),spins=items.filter(i=>i.info.kind==='spin'),steps=items.filter(i=>i.info.kind==='steps'),chs=items.filter(i=>i.info.kind==='choreo');
+    const solo=jumps.filter(j=>j.info.parts.length===1),combos=jumps.filter(j=>j.info.parts.length>1);const key=j=>j.revs+j.type;
+    const axOk=j=>j.info.parts[0].type==='A'&&((nov||(jun&&W))?j.info.parts[0].revs===2:(j.info.parts[0].revs>=2&&j.info.parts[0].revs<=3));
+    const ax=solo.find(axOk);R_(ax?'ok':'bad',(nov||(jun&&W))?'a) Double Axel':'a) Double or triple Axel',ax?ax.el.code+' at '+fmtS(ax.el.t):'Add 2A'+((nov||(jun&&W))?'':' or 3A'));
+    const soloJ=solo.filter(j=>j.info.parts[0].type!=='A');let bOk,bLabel;
+    if(sen){bOk=soloJ.find(j=>j.info.parts[0].revs===3||(!W&&j.info.parts[0].revs===4));bLabel=W?'b) Solo triple jump':'b) Solo triple or quadruple jump'}
+    else if(jun){bOk=soloJ.find(j=>j.info.parts[0].type==='Lz'&&j.info.parts[0].revs>=2);bLabel='b) Double or triple Lutz (this season\'s junior solo jump)'}
+    else{bOk=soloJ.find(j=>j.info.parts[0].revs>=2);bLabel='b) Double or triple solo jump'}
+    R_(bOk?'ok':'bad',bLabel,bOk?bOk.el.code+' at '+fmtS(bOk.el.t):'Missing');
+    const combo=combos[0];let cOk=false,cNote='Missing';
+    if(combo){const pr=combo.info.parts;const rv=pr.map(p=>p.revs);const hasEu=pr.some(p=>p.type==='Eu');
+      if(pr.length!==2)cNote='Short program combinations are exactly two jumps';
+      else if(hasEu)cNote='No Euler allowed in the short program combination';
+      else if(sen&&W)cOk=rv.every(r=>r>=2&&r<=3)&&rv.includes(3);
+      else if(sen)cOk=(rv.includes(3)&&rv.every(r=>r>=2&&r<=3))||(rv[0]===4&&rv[1]>=2&&rv[1]<=3);
+      else if(jun&&W)cOk=rv.every(r=>r>=2&&r<=3);
+      else if(jun)cOk=rv.every(r=>r>=2&&r<=3)&&rv.includes(3);
+      else cOk=rv.every(r=>r>=2&&r<=3)&&rv.includes(2)&&pr[1].type==='T';
+      if(cOk){const used=[ax,bOk].filter(Boolean).map(j=>key(j.info.parts[0]));if(pr.some(p=>used.includes(key(p)))){cOk=false;cNote='Combination repeats a jump used in a) or b)'}else cNote=combo.el.code+' at '+fmtS(combo.el.t)}
+      else if(cNote==='Missing')cNote=combo.el.code+' does not meet this level\'s combination rule'}
+    R_(cOk?'ok':'bad',sen?(W?'c) Combination: double+triple or triple+triple':'c) Combination: 2+3, 3+3, 4+2 or 4+3'):jun?(W?'c) Combination: two doubles, double+triple or two triples':'c) Combination: double+triple or two triples'):'c) Combination of two doubles or double+triple, second jump a toe loop',cNote);
+    const fly=spins.find(s=>s.info.fly&&!s.info.combo);const needCamel=(jun&&!W)||nov;const flyOk=fly&&(!needCamel||fly.info.positions[0]==='C');
+    R_(flyOk?'ok':'bad',needCamel?'d) Flying camel spin':'d) Flying spin',fly?fly.el.code+(flyOk?'':' is not a camel'):'Missing');
+    let one;if(W)one=spins.find(s=>!s.info.fly&&!s.info.combo&&!s.info.change&&(s.info.positions[0]==='L'||s.info.positions[0]==='S'||(sen&&s.info.positions[0]==='C')));
+    else one=spins.find(s=>!s.info.fly&&!s.info.combo&&s.info.change&&(s.info.positions[0]==='S'||(sen&&s.info.positions[0]==='C')));
+    R_(one?'ok':'bad',W?(sen?'e) Layback, sideways-leaning, sit or camel spin, no change of foot':'e) Layback, sideways-leaning or sit spin, no change of foot'):(sen?'e) Camel or sit spin with one change of foot':'e) Sit spin with one change of foot'),one?one.el.code+' at '+fmtS(one.el.t):'Missing');
+    const co=spins.find(s=>s.info.combo&&s.info.change&&!s.info.fly&&!s.info.choreo);R_(co?'ok':'bad','f) Spin combination with one change of foot, no flying entry',co?co.el.code+' at '+fmtS(co.el.t):'Missing (CCoSp)');
+    R_(steps.length===1?'ok':'bad','g) One step sequence using the full ice surface',steps.length?steps[0].el.code+' at '+fmtS(steps[0].el.t):'Missing');
+    R_(items.length===7?'ok':'bad','Exactly seven elements','Scored elements listed: '+items.length+(chs.length?' (choreographic sequences are not short-program elements)':''));
+  } else {
+    const jumps=items.filter(i=>i.info.kind==='jump'),spins=items.filter(i=>i.info.kind==='spin'),steps=items.filter(i=>i.info.kind==='steps'),chs=items.filter(i=>i.info.kind==='choreo');const combos=jumps.filter(j=>j.info.parts.length>1);const key=j=>j.revs+j.type;
+    const maxJ=nov?5:6;R_(jumps.length<=maxJ&&jumps.length>0?'ok':'bad','Up to '+maxJ+' jump elements','Listed: '+jumps.length);
+    R_(jumps.some(j=>j.info.parts.some(p=>p.type==='A'))?'ok':'bad','One Axel-type jump required',jumps.some(j=>j.info.parts.some(p=>p.type==='A'))?'Present':'Missing');
+    R_(combos.length<=2?'ok':'bad','Up to two combinations or sequences, one may be three jumps','Listed: '+combos.length+(combos.some(c=>c.info.parts.filter(p=>p.type!=='Eu').length>3)?' · one has more than three jumps':''));
+    const byType={};jumps.forEach(j=>j.info.parts.forEach(p=>{if(p.type!=='Eu')byType[p.type]=(byType[p.type]||0)+1}));const over=Object.entries(byType).filter(([k,v])=>v>(nov?2:3));
+    R_(over.length?'bad':'ok','Same jump type at most '+(nov?'twice':'three times')+' (any revolutions)',over.length?over.map(o=>JUMPS[o[0]]+' ×'+o[1]).join(', '):'OK');
+    const rep={};jumps.forEach(j=>j.info.parts.forEach(p=>{if(p.revs>=3){const k=key(p);rep[k]=rep[k]||{n:0,combo:0,quad:p.revs===4};rep[k].n++;if(j.info.parts.length>1)rep[k].combo++}}));
+    const bad=Object.entries(rep).filter(([k,v])=>v.n>2||(v.n===2&&v.combo===0));const quadReps=Object.values(rep).filter(v=>v.n===2&&v.quad).length;
+    R_(bad.length||quadReps>1?'bad':'ok','Only two triples/quads may be repeated, in a combination or sequence; at most one repeated quad',bad.length?bad.map(b=>b[0]).join(', '):(quadReps>1?'Two quads repeated':'OK'));
+    const sixTypes=new Set(jumps.flatMap(j=>j.info.parts.filter(p=>p.type!=='Eu').map(p=>p.type)));R_(sixTypes.size===6?'ok':'warn','All six jump types earns a 2-point bonus (new for 2026/27)','Types used: '+sixTypes.size+' of 6');
+    if(nov)R_(spins.length===2&&spins.some(s=>s.info.combo&&s.info.change&&!s.info.fly)&&spins.some(s=>s.info.fly&&!s.info.change&&s.info.positions[0]==='C')?'ok':'bad','Two spins: change-foot combination (no flying entry) and a flying camel','Listed: '+spins.map(s=>s.el.code).join(', '));
+    else R_(spins.length===3&&spins.some(s=>s.info.combo&&!s.info.choreo)&&spins.some(s=>s.info.fly&&!s.info.change&&!s.info.combo)&&spins.some(s=>s.info.choreo)?'ok':'bad','Three spins: a combination spin, a flying spin, and a choreographic spin','Listed: '+(spins.map(s=>s.el.code).join(', ')||'none'));
+    if(!nov)R_(steps.length===1?'ok':'bad','One step sequence using the full ice surface',steps.length?'Present':'Missing');
+    R_(chs.length===1?'ok':'bad','One choreographic sequence of at least two skating movements',chs.length?'Present':'Missing');
+    const second=jumps.filter(j=>j.el.t>=state.duration/2);R_(second.length>=3?'ok':'warn','Three jumping passes in the second half earn the 1.1× factor','In second half: '+second.length);
+  }
+  const unk=items.filter(i=>i.info.kind==='unknown');if(unk.length)R_('bad','Unrecognised codes',unk.map(u=>u.el.code).join(', '));
+  document.getElementById('rules').innerHTML=out.map(r=>`<div class="rule ${r.ok}"><div class="dot"></div><div><b>${r.label}</b><span>${r.note}</span></div></div>`).join('');
+  document.getElementById('rulesHead').textContent=levelName()+' · '+(state.seg==='SP'?'Short Program':'Free Program')+' · required elements';
+}
+
+/* ---------- Tabs ---------- */
+document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('.tab').forEach(t=>t.setAttribute('aria-selected',t===b));['program','music','map','rules'].forEach(n=>document.getElementById('tab-'+n).hidden=n!==b.dataset.tab);if(b.dataset.tab==='map')renderMap()}));
+
+/* ---------- Video export (site build only) ---------- */
+(function(){
+  const btn=document.getElementById('rec');if(!window.GS_SITE||!window.MediaRecorder||!renderer.domElement.captureStream)return;
+  btn.hidden=false;let rec=null,chunks=[];
+  const mime=['video/mp4;codecs=avc1','video/mp4','video/webm;codecs=vp9','video/webm'].find(m=>MediaRecorder.isTypeSupported(m))||'';
+  btn.addEventListener('click',()=>{
+    if(rec){rec.stop();return}
+    const stream=renderer.domElement.captureStream(30);
+    try{if(state.audio&&audioEl.captureStream){audioEl.captureStream().getAudioTracks().forEach(t=>stream.addTrack(t))}}catch(e){}
+    chunks=[];rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:8e6}:undefined);
+    rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
+    rec.onstop=()=>{const ext=(rec.mimeType||mime).includes('mp4')?'mp4':'webm';const blob=new Blob(chunks,{type:rec.mimeType||mime});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='gold-studio-program.'+ext;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);rec=null;btn.textContent='● Record video';btn.classList.remove('primary')};
+    seek(0);resetReplays();play();rec.start(500);btn.textContent='■ Stop & save';btn.classList.add('primary');
+    const watch=()=>{if(!rec)return;if(!state.playing){rec.stop();return}requestAnimationFrame(watch)};requestAnimationFrame(watch);
+  });
+})();
+
+loadSample();
+requestAnimationFrame(frame);
+window.GS={state,locate,sampleSkater,rebuild,seek,TL:()=>TL};
+})();
+</script>
