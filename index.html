@@ -269,6 +269,7 @@ input[type="range"]{width:100%;accent-color:var(--accent)}
 <script src="vendor/RoomEnvironment.js"></script>
 <script src="rigpose.js"></script>
 <script src="poses.js"></script>
+<script src="clips.js"></script>
 <script>
 (function(){
 'use strict';
@@ -305,9 +306,9 @@ function parseCode(raw){
   if(/^\d(T|S|Lo|F|Lz|A|Eu)(\+\d(T|S|Lo|F|Lz|A|Eu))*$/.test(code)){
     const parts=code.split('+').map(p=>({revs:+p[0],type:p.slice(1)}));
     const names=parts.map(p=>(p.type==='Eu'?'Euler':REVW[p.revs]+' '+JUMPS[p.type]));
-    const bv=parts.reduce((a,p)=>a+(BV_JUMP[p.type]?BV_JUMP[p.type][Math.min(3,p.revs)-1]||0:0),0);
-    const dur=.6+parts.reduce((a,p)=>a+airOf(p)+.5,0)+.5;
-    return {code,kind:'jump',parts,name:names.join(' + '),dur,bv,pre:.6};
+    const bv=parts.reduce((a,p)=>a+(BV_JUMP[p.type]?BV_JUMP[p.type][Math.min(4,p.revs)-1]||0:0),0);
+    const info={code,kind:'jump',parts,name:names.join(' + '),bv};const plan=jumpPlan(info);info.dur=plan.dur;info.pre=plan.pre;info.mocap=plan.parts.some(x=>!x.proc);
+    return info;
   }
   if((m=code.match(/^(F)?(C|S|U|L|CC|CS|CU|CL|Co|CCo|FCCo)?Sp(B|[1-4])?$/))){
     const fly=!!m[1]||/^FCCo/.test(code);let body=(m[2]||'U').replace(/^F/,'');
@@ -334,7 +335,25 @@ function parseCode(raw){
   if((m=code.match(/^(PCoSp|PSp|PChSp)(B|[1-4])?$/)))return {code,kind:'pairspin',combo:m[1]!=='PSp',choreo:m[1]==='PChSp',level:LVL(m[2]),positions:m[1]==='PSp'?['S','S']:['C','S','U'],name:({PCoSp:'pair combination spin',PSp:'pair spin',PChSp:'choreographic pair spin'})[m[1]]+(m[2]?' level '+m[2]:''),dur:8,bv:BV_PSP[m[1]][LVL(m[2])],pre:1.0};
   return {code,kind:'unknown',name:'unrecognised code',dur:3,bv:0,pre:0};
 }
-function airOf(p){return (AIR[p.revs]||.6)+(p.type==='A'?.05:0)}
+function airOf(p){const c=clipFor(p);if(c)return c.clip.air*c.timeK;return (AIR[p.revs]||.6)+(p.type==='A'?.05:0)}
+/* motion-capture clips: {type:{revs:clip}}; a missing count borrows the highest recorded one and scales its rotation */
+const CLIPS=window.JUMP_CLIPS||{};
+function clipFor(p){const byType=CLIPS[p.type];if(!byType||p.type==='Eu')return null;let clip=byType[String(p.revs)],declared=p.revs;
+  if(!clip){const ks=Object.keys(byType).map(Number).sort((a,b)=>b-a);if(!ks.length)return null;declared=ks[0];clip=byType[String(declared)]}
+  const want=p.revs+(p.type==='A'?.5:0),have=declared+(p.type==='A'?.5:0);const rotK=want/have;const timeK=Math.pow(rotK,.3);
+  return {clip,rotK,timeK,declared}}
+function clipFrame(clip,ct){const F=clip.frames;const x=clamp(ct*clip.fps,0,F.length-1);const i=Math.floor(x),u=x-i;const a=F[i],b=F[Math.min(F.length-1,i+1)];const o=new Array(a.length);for(let k=0;k<a.length;k++)o[k]=a[k]+(b[k]-a[k])*u;return o}
+function framePose(f){const pose={hips:[0,0,0],torso:[f[4],f[5],f[6]],head:[f[7],0,f[8]]};for(let j=0;j<10;j++)pose[DIRK[j]]=[f[9+j*3],f[10+j*3],f[11+j*3]];return pose}
+const DIRK=['lArm','lFore','rArm','rFore','lThigh','lShin','lFoot','rThigh','rShin','rFoot'];
+// timeline of a jump element built from its clips: parts[{clip,rotK,timeK,start,takeoff,landing,end,usedFrom}]
+function jumpPlan(inf){if(inf._plan)return inf._plan;const parts=[];let t=0;
+  for(let i=0;i<inf.parts.length;i++){const p=inf.parts[i];const c=clipFor(p);
+    if(!c){const air=airOf(p);const pre=i===0?.6:.4;parts.push({proc:true,start:t,takeoff:t+pre,landing:t+pre+air,end:t+pre+air+(i===inf.parts.length-1?.5:.45),p});t=parts[i].end;continue}
+    const clip=c.clip;const lead=i===0?clip.takeoff:.4;const air=clip.air*c.timeK;const tail=i===inf.parts.length-1?(clip.n/clip.fps-clip.landing):.45;
+    parts.push({clip,rotK:c.rotK,timeK:c.timeK,start:t,takeoff:t+lead,landing:t+lead+air,end:t+lead+air+tail,usedFrom:clip.takeoff-lead,p});t=parts[i].end}
+  inf._plan={parts,dur:t,pre:parts[0].takeoff};return inf._plan}
+// clip time for a part at element-local time lt (with rotation/time scaling inside the flight)
+function clipTime(part,lt){const c=part.clip;const rel=lt-part.start;const ct0=part.usedFrom+rel;if(lt<=part.takeoff)return ct0;const fl=(lt-part.takeoff)/part.timeK;if(lt<part.landing)return c.takeoff+fl;return c.landing+(lt-part.landing)}
 const CODE_LISTS={
   S:['2A','3A','3T','3S','3Lo','3F','3Lz','4T','4S','4Lo','4F','4Lz','4A','3Lz+3T','3F+3T','3Lz+2T','2A+3T','3Lz+1Eu+3S','3F+3Lo','4Lz+3T','4T+3T','4S+3T','4T+1Eu+3S','2Lz+2T','2A+2T',
      'FCSp4','FSSp4','FUSp4','LSp4','SSp4','CSp4','CCSp4','CSSp4','CLSp4','CCoSp4','CoSp4','FCCoSp4','ChSp1','StSq4','StSq3','ChSq1','Spiral','SpreadEagle','InaBauer','Hydroblade','Cantilever','Lunge','Crossovers'],
@@ -414,7 +433,13 @@ function rebuild(){
     const isJumpLike=k==='jump'||k==='throw';
     const back=isJumpLike&&!(k==='jump'&&it.info.parts[0].type==='A');
     let elemPath=null,elemStart=P,elemEnd=P,exitDir=entryDir,stationary=false;
-    if(isJumpLike||k==='twist'){
+    if(k==='jump'&&it.info.mocap){
+      const left={x:entryDir.z,z:-entryDir.x};const T=it.t1-it.t0;
+      const r0=jumpTrack(it.info,0),r1=jumpTrack(it.info,T);
+      const a={x:P.x+entryDir.x*r0.along+left.x*r0.lateral,z:P.z+entryDir.z*r0.along+left.z*r0.lateral};
+      const b={x:P.x+entryDir.x*r1.along+left.x*r1.lateral,z:P.z+entryDir.z*r1.along+left.z*r1.lateral};
+      elemPath=makePath([a,P,b]);elemStart=a;elemEnd=b;exitDir=entryDir;it.left=left;it.dir=entryDir;it.P=P;
+    }else if(isJumpLike||k==='twist'){
       const v=4.8;const T=it.t1-it.t0;const a={x:P.x-entryDir.x*v*it.info.pre,z:P.z-entryDir.z*v*it.info.pre};const b={x:P.x+entryDir.x*v*(T-it.info.pre),z:P.z+entryDir.z*v*(T-it.info.pre)};
       const A=inside(a.x,a.z),B=inside(b.x,b.z);elemPath=makePath([A,P,B]);elemStart=A;elemEnd=B;exitDir=entryDir;
     }else if(k==='spin'||k==='pairspin'||k==='deathspiral'){
@@ -471,6 +496,7 @@ function locate(t){
     const p=sg.path.at(u);return Object.assign(p,{speed:sg.speed,seg:sg,u});}
   const it=sg.item,k=it.info.kind;
   if(k==='spin'||k==='pairspin'||k==='deathspiral'){const pre=it.info.pre/T;const u=lt<pre?smooth(lt/pre):1;const p=sg.path.at(u);return Object.assign(p,{speed:lt<pre?4:0,seg:sg})}
+  if(k==='jump'&&it.info.mocap&&it.P){const r=jumpTrack(it.info,t-sg.t0);return {x:it.P.x+it.dir.x*r.along+it.left.x*r.lateral,z:it.P.z+it.dir.z*r.along+it.left.z*r.lateral,dir:it.dir,kappa:0,speed:4.5,seg:sg}}
   const p=sg.path.at(lt);return Object.assign(p,{speed:4.5,seg:sg});
 }
 
@@ -496,6 +522,23 @@ function spinTrack(inf,lt,T){
   return {pose:R.mixPose(last,POSE.openArms,easeOut(u)),yaw:TAU*.3+TAU*rate*spinT+TAU*.5*easeOut(u),air:0};
 }
 function jumpTrack(inf,lt){
+  const plan=jumpPlan(inf);
+  if(inf.mocap){
+    // sample each part; accumulate travel and heading so combinations chain continuously
+    let offA=0,offL=0,offY=0,prevEnd=null,result=null;
+    for(let i=0;i<plan.parts.length;i++){const part=plan.parts[i];
+      const sampleAt=(time)=>{if(part.proc){const r=procJump(part,time);return {pose:r.pose,along:offA+r.along,lateral:offL,yaw:offY+r.yaw,air:r.air,inAir:r.inAir}}
+        const f=clipFrame(part.clip,clipTime(part,time));let yaw=f[2];
+        if(part.rotK!==1){const f0=clipFrame(part.clip,part.clip.takeoff)[2];if(time>=part.takeoff)yaw=f0+(yaw-f0)*part.rotK;}
+        return {pose:framePose(f),along:offA+f[0],lateral:offL+f[1],yaw:offY+yaw,air:f[3],inAir:time>part.takeoff&&time<part.landing}};
+      const first=sampleAt(part.start);
+      if(prevEnd){offA+=prevEnd.along-first.along;offL+=prevEnd.lateral-first.lateral;offY+=prevEnd.yaw-first.yaw}
+      if(lt<part.end||i===plan.parts.length-1){const cur=sampleAt(Math.min(lt,part.end));
+        if(prevEnd&&lt<part.start+.2){const k=smooth((lt-part.start)/.2);cur.pose=R.mixPose(prevEnd.pose,cur.pose,k);cur.along=lerp(prevEnd.along,cur.along,k);cur.lateral=lerp(prevEnd.lateral,cur.lateral,k);cur.air=lerp(prevEnd.air,cur.air,k)}
+        result=cur;result.part=i;result.landed=lt>=part.landing&&i===plan.parts.length-1;break}
+      prevEnd=sampleAt(part.end);}
+    return result;
+  }
   const pre=inf.pre;let t=lt;const toe=['T','F','Lz'].includes(inf.parts[0].type);
   if(t<pre){const u=t/pre;const target=toe?POSE.pick:POSE.crouch;return {pose:R.mixPose(POSE.glide,target,smooth(u)),yaw:0,air:0}}
   t-=pre;let yawAcc=0;
@@ -509,6 +552,11 @@ function jumpTrack(inf,lt){
   }
   const u=clamp(t/.5,0,1);return {pose:R.mixPose(POSE.land,POSE.glide,smooth(u)),yaw:yawAcc,air:0,landed:true};
 }
+function procJump(part,time){const p=part.p,toe=['T','F','Lz'].includes(p.type);const v=4.6;const along=(time-part.takeoff)*v;
+  if(time<part.takeoff){const u=(time-part.start)/(part.takeoff-part.start);return {pose:R.mixPose(POSE.land,toe?POSE.pick:POSE.crouch,smooth(u)),along,yaw:0,air:0}}
+  const air=part.landing-part.takeoff,h=9.81*air*air/8;
+  if(time<part.landing){const u=(time-part.takeoff)/air;const pose=u<.18?R.mixPose(POSE.launch,POSE.tuck,u/.18):u>.8?R.mixPose(POSE.tuck,POSE.land,smooth((u-.8)/.2)):POSE.tuck;const revs=p.revs+(p.type==='A'?.5:0);return {pose,along,yaw:TAU*revs*(u<.12?(u/.12)*(u/.12)*.12:.12+(u-.12)),air:4*h*u*(1-u),inAir:true}}
+  const u=clamp((time-part.landing)/.45,0,1);return {pose:R.mixPose(POSE.land,POSE.glide,smooth(u)),along,yaw:TAU*(p.revs+(p.type==='A'?.5:0)),air:0}}
 function stepsTrack(lt,T){
   const u=lt/T;const ph=lt*1.15;const s=(Math.sin(ph*Math.PI)+1)/2;let pose=R.mixPose(POSE.stepA,POSE.stepB,smooth(s));let yaw=0;
   for(const c of [.36,.72]){const d=lt-c*T;if(d>=0&&d<1.0){const v=d/1.0;pose=R.mixPose(pose,POSE.twizzle,Math.sin(v*Math.PI));yaw=TAU*2*smooth(v)}}
@@ -559,8 +607,9 @@ function sampleSkater(t,who){
   if(sg.kind==='trans'){const r=transTrack(sg,t,loc);Object.assign(out,r,{label:r.label,desc:'Connecting skating built between the elements: edges, crossovers and arm phrasing.',phase:'Transition',lateral});return out}
   const it=sg.item,inf=it.info,lt=t-sg.t0,T=sg.t1-sg.t0;out.item=it;out.lateral=lateral;
   switch(inf.kind){
-    case 'jump':{const r=jumpTrack(inf,lt);Object.assign(out,r,{backBlend:it.back?1:(r.landed||r.inAir||r.part!=null?1:0)});
-      if(!it.back){/* Axel: forward takeoff, lands backward */out.backBlend=lt<inf.pre?0:1}
+    case 'jump':{const r=jumpTrack(inf,lt);
+      if(inf.mocap){Object.assign(out,r,{backBlend:it.back?1:0,yaw:r.yaw-(it.back?Math.PI:0),travel:{along:r.along,lateral:r.lateral}})}
+      else{Object.assign(out,r,{backBlend:it.back?1:(r.landed||r.inAir||r.part!=null?1:0)});if(!it.back){out.backBlend=lt<inf.pre?0:1}}
       break}
     case 'spin':{Object.assign(out,spinTrack(inf,lt,T),{backBlend:0});break}
     case 'steps':{Object.assign(out,stepsTrack(lt,T),{backBlend:0});break}
@@ -804,7 +853,7 @@ function updateHUD(s,t){
   document.getElementById('tdisp').textContent=fmt(state.time);
   let label,desc,phase;
   if(s.item){const it=s.item,inf=it.info;label=it.el.code;const idx=TL.items.indexOf(it)+1;
-    if(inf.kind==='jump'){const revs=inf.parts.reduce((a,p)=>a+p.revs+(p.type==='A'?.5:0),0);phase=s.inAir?'In the air':'Jump pass';desc=cap(inf.name)+' · '+revs+' rotations'+(it.bonus?' · second-half ×1.1':'')+' · base value '+inf.bv.toFixed(2)}
+    if(inf.kind==='jump'){const revs=inf.parts.reduce((a,p)=>a+p.revs+(p.type==='A'?.5:0),0);phase=s.inAir?'In the air':'Jump pass';desc=cap(inf.name)+' · '+revs+' rotations'+(inf.mocap?' · motion-captured':'')+(it.bonus?' · second-half ×1.1':'')+' · base value '+inf.bv.toFixed(2)}
     else if(inf.kind==='spin'){phase='Spin';desc=cap(inf.name)+(inf.change?' · change of foot':'')+(inf.fly?' · flying entry':'')+' · base value '+inf.bv.toFixed(2)}
     else if(inf.kind==='steps'){phase='Step sequence';desc=(s.turn?cap(s.turn)+' · ':'')+'turns on both feet, full ice surface, two twizzles · base value '+inf.bv.toFixed(2)}
     else if(inf.kind==='choreo'){phase='Choreo sequence';desc=(s.turn?cap(s.turn)+' · ':'')+'spiral, spread eagle, Ina Bauer, lunge'}

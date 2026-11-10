@@ -5,3 +5,7 @@
 Includes short and free program rule checks for singles and pairs (ISU 2026/27), base values, tempo detection with beat snapping, slow-motion jump replays, five cameras and video export.
 
 Live site: https://notjut.github.io/goldstudio/
+
+## Motion capture
+
+Jump animation is driven by motion-capture recordings converted from the FS-Jump3D dataset (Tanaka, Suzuki & Fujii, MMSports '24; CC BY-NC-SA 4.0), used here for development and research only. The converter (`convert.py` in the project notes) levels each recording to the ice plane, detects flight from the free-fall of the centre of mass, counts in-air rotations and retargets joint directions to the skater rig.
