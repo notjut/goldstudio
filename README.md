@@ -1,4 +1,4 @@
-# Gold Studio
+# Bladework
 
 3D figure skating program builder. Enter a program element by element (ISU codes with the moment of takeoff), drop in the music, and watch a 3D skater perform it on a regulation rink: jumps up to quads, spins by position, step and choreographic sequences, connecting skating built on edges and crossovers, and a first pass at pairs (twists, throws, lifts, death spirals, pair spins).
 
