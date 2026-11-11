@@ -803,10 +803,11 @@ function frame(now){
   advance(dt);
   const t=state.replay?state.replay.t:state.time;
   if(state.ready){
-    const pairs=state.disc==='P';skaters[1].root.visible=pairs;
+    const pairs=state.disc==='P',men=state.disc==='M';skaters[0].root.visible=!men;skaters[1].root.visible=pairs||men;
     let focus=null;
-    for(const s of skaters){if(s.who==='B'&&!pairs)continue;
-      const smp=sampleSkater(t,s.who);const loc=smp.loc;
+    for(const s of skaters){if(!s.root.visible)continue;
+      const who=men?'A':s.who;
+      const smp=sampleSkater(t,who);const loc=smp.loc;
       // heading from path direction
       let dir=loc.dir;if(Math.abs(dir.x)+Math.abs(dir.z)>1e-6)s.dirPrev=dir;else dir=s.dirPrev;
       let heading=Math.atan2(s.dirPrev.x,s.dirPrev.z);
@@ -828,7 +829,7 @@ function frame(now){
       s.lean.rotation.z+= (rollT-s.lean.rotation.z)*Math.min(1,state.playing?dt*8:1);
       R.applyPose(s.rig,smp.pose,smp.air||0);
       s.shadow.position.set(px,.009,pz);const a=smp.air||0;s.shadow.scale.setScalar(1-Math.min(.6,a*.3));s.shadow.material.opacity=.22*(1-Math.min(.7,a*.3));
-      if(s.who==='A')focus={x:px,z:pz,air:a,smp};
+      if(who==='A')focus={x:px,z:pz,air:a,smp};
     }
     updateTrace(state.time);
     // camera
