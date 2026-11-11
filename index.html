@@ -356,7 +356,7 @@ function spinPose(name,time){const c=SPINS[name];if(!c)return POSE[name];const d
 function jumpPlan(inf){if(inf._plan)return inf._plan;const parts=[];let t=0;
   for(let i=0;i<inf.parts.length;i++){const p=inf.parts[i];const c=clipFor(p);
     if(!c){const air=airOf(p);const pre=i===0?.6:.4;parts.push({proc:true,start:t,takeoff:t+pre,landing:t+pre+air,end:t+pre+air+(i===inf.parts.length-1?.5:.45),p});t=parts[i].end;continue}
-    const clip=c.clip;const lead=i===0?clip.takeoff:.4;const air=clip.air*c.timeK;const tail=i===inf.parts.length-1?(clip.n/clip.fps-clip.landing):.45;
+    const clip=c.clip;const lead=i===0?clip.takeoff:.4;const air=clip.air*c.timeK;const tail=i===inf.parts.length-1?Math.min(.6,clip.n/clip.fps-clip.landing):.45;
     parts.push({clip,rotK:c.rotK,timeK:c.timeK,start:t,takeoff:t+lead,landing:t+lead+air,end:t+lead+air+tail,usedFrom:clip.takeoff-lead,p});t=parts[i].end}
   inf._plan={parts,dur:t,pre:parts[0].takeoff};return inf._plan}
 // clip time for a part at element-local time lt (with rotation/time scaling inside the flight)
@@ -563,7 +563,11 @@ function jumpTrack(inf,lt){
       const sampleAt=(time)=>{if(part.proc){const r=procJump(part,time);return {pose:r.pose,along:offA+r.along,lateral:offL,yaw:offY+r.yaw,air:r.air,inAir:r.inAir}}
         const f=clipFrame(part.clip,clipTime(part,time));let yaw=f[2];
         if(part.rotK!==1){const f0=clipFrame(part.clip,part.clip.takeoff)[2];if(time>=part.takeoff)yaw=f0+(yaw-f0)*part.rotK;}
-        return {pose:framePose(f),along:offA+f[0],lateral:offL+f[1],yaw:offY+yaw,air:f[3],inAir:time>part.takeoff&&time<part.landing}};
+        let pose=framePose(f);
+        if(time>part.landing){ // mocap skaters often double over after landing: hold the torso up and settle into a landing glide
+          const k=clamp((time-part.landing)/Math.max(.05,part.end-part.landing),0,1);pose.torso[0]=Math.min(pose.torso[0],.45);pose.torso[2]*=.6;
+          if(i===plan.parts.length-1)pose=R.mixPose(pose,POSE.land,smooth(k)*.85)}
+        return {pose,along:offA+f[0],lateral:offL+f[1],yaw:offY+yaw,air:f[3],inAir:time>part.takeoff&&time<part.landing}};
       const first=sampleAt(part.start);
       if(prevEnd){offA+=prevEnd.along-first.along;offL+=prevEnd.lateral-first.lateral;offY+=prevEnd.yaw-first.yaw}
       if(lt<part.end||i===plan.parts.length-1){const cur=sampleAt(Math.min(lt,part.end));
