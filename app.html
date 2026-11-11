@@ -610,21 +610,25 @@ function transTrack(sg,t,loc){
   if(toBack){const bb=lt>tBack?smooth(Math.min(1,(lt-tBack)/turnDur)):0;backBlend=Math.max(backBlend,bb)}
   const back=backBlend>.5;
   const rate=clamp(sp/5.5,.75,1.35);const ph=lt*rate;const s=(Math.sin(ph*Math.PI)+1)/2;
-  let pose,tracked=false;const clipTimeT=(t-sg.t0)*rate;
-  if(back){const c=SK.bcross;if(c){pose=loopPose(c,clipTimeT,.3);if(k<-.02)pose=R.mirrorPose(pose);tracked=true}
-    else{let a,b;if(k>.025){a=POSE.bcrossA;b=POSE.bcrossB}else if(k<-.025){a=mir('bcrossA');b=mir('bcrossB')}else{a=POSE.glide;b=mir('glide')}pose=R.mixPose(a,b,smooth(s))}}
-  else{const c=SK.stroke;const curve=Math.abs(k)>.03;
-    if(c&&!curve){pose=loopPose(c,clipTimeT,.25);if(Math.floor(clipTimeT/(c.n/c.fps))%2)pose=R.mirrorPose(pose);tracked=true}
-    else{let a,b;if(k>.03){a=POSE.crossA;b=POSE.crossB}else if(k<-.03){a=mir('crossA');b=mir('crossB')}else{a=POSE.strokeL;b=mir('strokeL')}pose=R.mixPose(a,b,smooth(s))}}
-  // turning moment: mohawk
-  const inTurn=(toBack&&lt>tBack&&lt<tBack+turnDur)||(sg.fromBack&&lt<Math.min(1.6,T*.3)&&lt>Math.min(1.6,T*.3)-turnDur);
-  if(inTurn)pose=R.mixPose(pose,POSE.mohawk,.6);
-  // light arm phrasing only on the hand-built poses; tracked loops keep their own arms
-  if(!tracked){const phrase=(Math.sin(t*.55)+1)/2;pose=R.mixPose(pose,POSE.openArms,phrase*.2*(1-backBlend))}
-  // ease out of a stationary start / into the final pose
+  // one continuous blend space: forward stroking <-> back crossovers by facing, curve direction by (signed, eased) curvature
+  const kw=clamp(k/.035,-1,1);const w=Math.abs(kw);const clipTimeT=(t-sg.t0)*rate;
+  let fwd,bk;
+  if(SK.stroke){fwd=loopPose(SK.stroke,clipTimeT,.3);if(Math.floor(clipTimeT/(SK.stroke.n/SK.stroke.fps))%2)fwd=R.mirrorPose(fwd);
+    // on a curve: turn the upper body into the circle instead of switching to a different pose set
+    fwd.torso=[fwd.torso[0],fwd.torso[1]+kw*.3,fwd.torso[2]+kw*.08];fwd.head=[fwd.head[0],(fwd.head[1]||0)+kw*.25,fwd.head[2]]}
+  else{let a,b;if(k>.03){a=POSE.crossA;b=POSE.crossB}else if(k<-.03){a=mir('crossA');b=mir('crossB')}else{a=POSE.strokeL;b=mir('strokeL')}fwd=R.mixPose(a,b,smooth(s))}
+  if(SK.bcross){const bR=loopPose(SK.bcross,clipTimeT,.3);bk=R.mixPose(R.mirrorPose(bR),bR,(kw+1)/2)}
+  else{let a,b;if(k>.025){a=POSE.bcrossA;b=POSE.bcrossB}else if(k<-.025){a=mir('bcrossA');b=mir('bcrossB')}else{a=POSE.glide;b=mir('glide')}bk=R.mixPose(a,b,smooth(s))}
+  let pose=R.mixPose(fwd,bk,smooth(backBlend));
+  // turning moment: mohawk, eased in and out
+  const tf=Math.min(1.6,T*.3);let turnW=0;
+  if(toBack&&lt>tBack&&lt<tBack+turnDur)turnW=Math.sin((lt-tBack)/turnDur*Math.PI);
+  if(sg.fromBack&&lt>tf-turnDur&&lt<tf)turnW=Math.sin((lt-(tf-turnDur))/turnDur*Math.PI);
+  const inTurn=turnW>.5;if(turnW>0)pose=R.mixPose(pose,POSE.mohawk,turnW*.55);
   if(sg.fromStationary&&lt<1.2)pose=R.mixPose(POSE.openArms,pose,smooth(lt/1.2));
   if(sg.final&&u>.85)pose=R.mixPose(pose,POSE.glide,smooth((u-.85)/.15));
-  const label=back?(Math.abs(k)>.025?'Back crossovers':'Back edges'):(Math.abs(k)>.03?'Forward crossovers':'Stroking');
+  const curveNow=sg._curve?w>.35:w>.65;sg._curve=curveNow;
+  const label=back?(curveNow?'Back crossovers':'Back edges'):(curveNow?'Crossovers on the curve':'Stroking');
   return {pose,yaw:0,air:0,backBlend,label:inTurn?'Mohawk turn':label};
 }
 // per-skater sample: returns {pose,yaw,air,backBlend,roll,lift,offset}
@@ -856,7 +860,10 @@ function frame(now){
       const v=loc.speed||0,kap=loc.kappa||0;const leanCurve=clamp(Math.atan(v*v*kap/9.81)*.9,-.4,.4)*(smp.item?.35:1);
       const rollT=(smp.roll||0)+(-leanCurve*(1-2*s.backSmooth));
       s.lean.rotation.z+= (rollT-s.lean.rotation.z)*Math.min(1,state.playing?dt*8:1);
-      R.applyPose(s.rig,smp.pose,smp.air||0);
+      // temporal smoothing of the connecting-skating pose (tracked loops carry tracker jitter)
+      let poseOut=smp.pose;if(loc.seg&&loc.seg.kind==='trans'&&state.playing&&s.posePrev){poseOut=R.mixPose(s.posePrev,smp.pose,Math.min(1,dt*9))}
+      s.posePrev=loc.seg&&loc.seg.kind==='trans'?poseOut:null;
+      R.applyPose(s.rig,poseOut,smp.air||0);
       s.shadow.position.set(px,.009,pz);const a=smp.air||0;s.shadow.scale.setScalar(1-Math.min(.6,a*.3));s.shadow.material.opacity=.22*(1-Math.min(.7,a*.3));
       if(who==='A')focus={x:px,z:pz,air:a,smp};
     }
