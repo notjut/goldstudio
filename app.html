@@ -260,6 +260,7 @@ input[type="range"]{width:100%;accent-color:var(--accent)}
 <script src="rigpose.js"></script>
 <script src="poses.js"></script>
 <script src="clips.js"></script>
+<script src="spins.js"></script>
 <script>
 (function(){
 'use strict';
@@ -335,6 +336,9 @@ function clipFor(p){const byType=CLIPS[p.type];if(!byType||p.type==='Eu')return 
 function clipFrame(clip,ct){const F=clip.frames;const x=clamp(ct*clip.fps,0,F.length-1);const i=Math.floor(x),u=x-i;const a=F[i],b=F[Math.min(F.length-1,i+1)];const o=new Array(a.length);for(let k=0;k<a.length;k++)o[k]=a[k]+(b[k]-a[k])*u;return o}
 function framePose(f){const pose={hips:[0,0,0],torso:[f[4],f[5],f[6]],head:[f[7],0,f[8]]};for(let j=0;j<10;j++)pose[DIRK[j]]=[f[9+j*3],f[10+j*3],f[11+j*3]];return pose}
 const DIRK=['lArm','lFore','rArm','rFore','lThigh','lShin','lFoot','rThigh','rShin','rFoot'];
+/* spin positions from tracked video: {camel,sit,upright,layback,biellmann} looping clips; ping-pong playback avoids loop pops */
+const SPINS=window.SPIN_CLIPS||{};
+function spinPose(name,time){const c=SPINS[name];if(!c)return POSE[name];const dur=c.n/c.fps;let u=(time%(2*dur));if(u>dur)u=2*dur-u;return framePose(clipFrame(c,u))}
 // timeline of a jump element built from its clips: parts[{clip,rotK,timeK,start,takeoff,landing,end,usedFrom}]
 function jumpPlan(inf){if(inf._plan)return inf._plan;const parts=[];let t=0;
   for(let i=0;i<inf.parts.length;i++){const p=inf.parts[i];const c=clipFor(p);
@@ -494,7 +498,7 @@ function locate(t){
 const TURNS=['rocker','counter','bracket','twizzle','choctaw','loop','mohawk','twizzle','rocker','bracket'];
 function spinTrack(inf,lt,T){
   const entry=inf.pre||1,exit=.9,spinT=T-entry-exit;const n=inf.positions.length;
-  const posPose=(code,mirrorIt)=>{let p=POSE[({C:'camel',S:'sit',U:'upright',L:'layback'})[code]||'upright'];return mirrorIt?R.mirrorPose(p):p};
+  const posPose=(code,mirrorIt)=>{const nm=({C:'camel',S:'sit',U:'upright',L:'layback',B:'biellmann'})[code]||'upright';let p=spinPose(nm,lt);return mirrorIt?R.mirrorPose(p):p};
   const changeAt=inf.change?Math.ceil(n/2):n;
   if(lt<entry){const u=lt/entry;let pose,air=0;
     if(inf.fly){pose=u<.45?R.mixPose(POSE.glide,POSE.crouch,smooth(u/.45)):u<.8?R.mixPose(POSE.crouch,POSE.fly,easeOut((u-.45)/.35)):R.mixPose(POSE.fly,posPose(inf.positions[0]),smooth((u-.8)/.2));air=u>.45&&u<.95?Math.sin((u-.45)/.5*Math.PI)*.5:0}
@@ -503,7 +507,7 @@ function spinTrack(inf,lt,T){
   if(lt<entry+spinT){const u=(lt-entry)/spinT;const idx=Math.min(n-1,Math.floor(u*n));const lu=u*n-idx;
     const m=inf.change&&idx>=changeAt;let p=posPose(inf.positions[idx],m);
     // level-4 flourish: layback -> Biellmann at the end
-    if(inf.positions[idx]==='L'&&inf.level>=4&&lu>.55)p=R.mixPose(POSE.layback,POSE.biellmann,smooth(Math.min(1,(lu-.55)/.25)));
+    if(inf.positions[idx]==='L'&&inf.level>=4&&lu>.55)p=R.mixPose(posPose('L',m),posPose('B',m),smooth(Math.min(1,(lu-.55)/.25)));
     const next=idx+1;if(next<n&&lu>.8){let q=posPose(inf.positions[next],inf.change&&next>=changeAt);p=R.mixPose(p,q,smooth((lu-.8)/.2))}
     let air=0;if(inf.change&&idx===changeAt-1&&lu>.9)air=Math.sin((lu-.9)/.1*Math.PI)*.16;
     const rate=inf.choreo?1.3:2.0;const accel=inf.positions[idx]==='U'&&idx===n-1?1+lu*1.2:1;

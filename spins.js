@@ -1,0 +1,1 @@
+window.SPIN_CLIPS={};
