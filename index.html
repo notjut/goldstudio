@@ -348,6 +348,9 @@ function framePose(f){const pose={hips:[0,0,0],torso:[f[4],f[5],f[6]],head:[f[7]
 const DIRK=['lArm','lFore','rArm','rFore','lThigh','lShin','lFoot','rThigh','rShin','rFoot'];
 /* spin positions from tracked video: {camel,sit,upright,layback,biellmann} looping clips; ping-pong playback avoids loop pops */
 const SPINS=window.SPIN_CLIPS||{};
+const SK=window.SKATE_CLIPS||{};
+// looping playback with a crossfade over the seam
+function loopPose(c,time,fade){const dur=c.n/c.fps;const u=((time%dur)+dur)%dur;const p=framePose(clipFrame(c,u));if(u<dur-fade)return p;const k=(u-(dur-fade))/fade;return R.mixPose(p,framePose(clipFrame(c,u-(dur-fade))),smooth(k))}
 function spinPose(name,time){const c=SPINS[name];if(!c)return POSE[name];const dur=c.n/c.fps;let u=(time%(2*dur));if(u>dur)u=2*dur-u;return framePose(clipFrame(c,u))}
 // timeline of a jump element built from its clips: parts[{clip,rotK,timeK,start,takeoff,landing,end,usedFrom}]
 function jumpPlan(inf){if(inf._plan)return inf._plan;const parts=[];let t=0;
@@ -465,15 +468,40 @@ function rebuild(){
       elemPath=makePath(hermite(P,{x:entryDir.x*len,z:entryDir.z*len},end,{x:nd.x*len,z:nd.z*len},20));elemStart=P;elemEnd=end;exitDir=nd;
     }
     // transition from prevPos to elemStart over [prevT, it.t0]
-    const gap=it.t0-prevT;
+    let gap=it.t0-prevT;
+    {const Lc0=Math.hypot(elemStart.x-prevPos.x,elemStart.z-prevPos.z);const need=Lc0/8.5;if(gap<need){it.t0=prevT+need;it.t1+=need-gap;it.el.t=it.t0+it.info.pre;gap=need}}
     if(gap>0.05){
       const chord={x:elemStart.x-prevPos.x,z:elemStart.z-prevPos.z};const Lc=Math.hypot(chord.x,chord.z);
       let pts;
       if(Lc<0.5){pts=[prevPos,elemStart]}
-      else{const cd=norm(chord);const bend=Math.min(.9,.25+gap*.06)*lobe;const d0=prevStationary?{x:cd.x*Lc*.5,z:cd.z*Lc*.5}:rot({x:prevDir.x*Lc*.8,z:prevDir.z*Lc*.8},0);
+      else{const cd=norm(chord);const d0=prevStationary?{x:cd.x*Lc*.5,z:cd.z*Lc*.5}:{x:prevDir.x*Lc*.8,z:prevDir.z*Lc*.8};
         const d1={x:entryDir.x*Lc*.8,z:entryDir.z*Lc*.8};
-        // add a lobe: bend both tangents away from the chord
-        const dd0=rot(d0,bend*.6),dd1=rot(d1,-bend*.6);pts=hermite(prevPos,dd0,elemStart,dd1,Math.max(12,Math.round(Lc*1.5)))}
+        // a skater covers ~6 m/s between elements: add serpentine lobes until the path is long enough for the time available
+        const target=Math.max(Lc,(gap-(prevStationary?1.2:0))*SKATE_SPEED());
+        const build=(n,amp)=>{const way=[prevPos];const nrm={x:-cd.z,z:cd.x};
+          for(let j=1;j<=n;j++){const u=j/(n+1);const sgn=(j%2?1:-1)*lobe;way.push(inside(prevPos.x+chord.x*u+nrm.x*amp*sgn,prevPos.z+chord.z*u+nrm.z*amp*sgn))}
+          way.push(elemStart);const out=[];
+          for(let j=0;j<way.length-1;j++){const a=way[j],b=way[j+1];const ta=j===0?d0:{x:(way[j+1].x-way[j-1].x)*.5,z:(way[j+1].z-way[j-1].z)*.5};const tb=j===way.length-2?d1:{x:(way[j+2].x-way[j].x)*.5,z:(way[j+2].z-way[j].z)*.5};
+            const seg=hermite(a,ta,b,tb,Math.max(10,Math.round(Math.hypot(b.x-a.x,b.z-a.z)*1.5)));if(j)seg.shift();out.push(...seg)}
+          return out};
+        // circuit: ride the oval around the rink for as long as needed, then come off it into the element
+        const circuit=(sgn)=>{const cx=0,cz=0,ax=23,az=10.5;const ang=p=>Math.atan2((p.z-cz)/az,(p.x-cx)/ax);const onE=a=>({x:cx+ax*Math.cos(a),z:cz+az*Math.sin(a)});
+          let a0=ang(prevPos),a1=ang(elemStart);const way=[prevPos];let a=a0+sgn*.35;let len=Math.hypot(onE(a).x-prevPos.x,onE(a).z-prevPos.z);let prev=onE(a);way.push(prev);
+          const step=sgn*.3;let guard=0;let pick=null;
+          while(guard++<200){const nx=onE(a+step);const dl=Math.hypot(nx.x-prev.x,nx.z-prev.z);const rem=Math.hypot(elemStart.x-prev.x,elemStart.z-prev.z);
+            // leave the oval where it is heading roughly toward the element and the total comes closest to the target
+            const da=Math.atan2(Math.sin(a1-a),Math.cos(a1-a));if(Math.abs(da)<.9){const err=Math.abs(len+rem-target);if(!pick||err<pick.err)pick={err,n:way.length}}
+            if(len>target+12)break;
+            a+=step;len+=dl;prev=nx;way.push(prev)}
+          if(pick)way.length=pick.n;
+          way.push(elemStart);const out=[];
+          for(let j=0;j<way.length-1;j++){const b=way[j+1],q=way[j];const ta=j===0?d0:{x:(way[j+1].x-way[j-1].x)*.5,z:(way[j+1].z-way[j-1].z)*.5};const tb=j===way.length-2?d1:{x:(way[j+2].x-way[j].x)*.5,z:(way[j+2].z-way[j].z)*.5};
+            const seg=hermite(q,ta,b,tb,Math.max(8,Math.round(Math.hypot(b.x-q.x,b.z-q.z)*1.5)));if(j)seg.shift();out.push(...seg)}
+          return out};
+        let best=null;const consider=cand=>{const L=makePath(cand).L;const err=Math.abs(L-target);if(!best||err<best.err)best={err,pts:cand}};
+        for(let n=0;n<=2;n++){for(let amp=(n?2:0);amp<=8;amp+=1){consider(build(n,amp));if(n===0)break}}
+        if(target>Lc+16){consider(circuit(lobe));consider(circuit(-lobe))}
+        pts=best.pts}
       const path=makePath(pts);
       segs.push({kind:'trans',t0:prevT,t1:it.t0,path,fromStationary:prevStationary,toBack:back,fromBack:prevBack,next:it,speed:path.L/gap});
       lobe=-lobe;
@@ -490,6 +518,7 @@ function rebuild(){
   renderTable();renderMap();renderRules();drawWave();updateMarkers();updateStats();
   document.getElementById('progName').textContent=levelName()+' · '+(state.seg==='SP'?'Short Program':'Free Program')+' · '+fmtS(state.duration);
 }
+function SKATE_SPEED(){return ({senior:6.0,junior:5.5,novice:4.8})[state.level]||5.5}
 function levelName(){return ({senior:'Senior',junior:'Junior',novice:'Advanced Novice'})[state.level]+' '+({W:'Women',M:'Men',P:'Pairs'})[state.disc]}
 function segAt(t){const s=TL.segs;for(let i=0;i<s.length;i++){if(t>=s[i].t0&&(t<s[i].t1||i===s.length-1))return s[i]}return s[s.length-1]}
 // position, direction, curvature at time t
@@ -586,16 +615,18 @@ function transTrack(sg,t,loc){
   if(sg.fromBack){const tf=Math.min(1.6,T*.3);backBlend=lt<tf?1-smooth(lt/tf):0}
   if(toBack){const bb=lt>tBack?smooth(Math.min(1,(lt-tBack)/turnDur)):0;backBlend=Math.max(backBlend,bb)}
   const back=backBlend>.5;
-  const rate=clamp(sp/4.2,.7,1.4);const ph=lt*rate;const s=(Math.sin(ph*Math.PI)+1)/2;
-  let a,b;
-  if(back){if(k>.025){a=POSE.bcrossA;b=POSE.bcrossB}else if(k<-.025){a=mir('bcrossA');b=mir('bcrossB')}else{a=POSE.glide;b=mir('glide')}}
-  else{if(k>.03){a=POSE.crossA;b=POSE.crossB}else if(k<-.03){a=mir('crossA');b=mir('crossB')}else{a=POSE.strokeL;b=mir('strokeL')}}
-  let pose=R.mixPose(a,b,smooth(s));
+  const rate=clamp(sp/5.5,.75,1.35);const ph=lt*rate;const s=(Math.sin(ph*Math.PI)+1)/2;
+  let pose,tracked=false;const clipTimeT=(t-sg.t0)*rate;
+  if(back){const c=SK.bcross;if(c){pose=loopPose(c,clipTimeT,.3);if(k<-.02)pose=R.mirrorPose(pose);tracked=true}
+    else{let a,b;if(k>.025){a=POSE.bcrossA;b=POSE.bcrossB}else if(k<-.025){a=mir('bcrossA');b=mir('bcrossB')}else{a=POSE.glide;b=mir('glide')}pose=R.mixPose(a,b,smooth(s))}}
+  else{const c=SK.stroke;const curve=Math.abs(k)>.03;
+    if(c&&!curve){pose=loopPose(c,clipTimeT,.25);if(Math.floor(clipTimeT/(c.n/c.fps))%2)pose=R.mirrorPose(pose);tracked=true}
+    else{let a,b;if(k>.03){a=POSE.crossA;b=POSE.crossB}else if(k<-.03){a=mir('crossA');b=mir('crossB')}else{a=POSE.strokeL;b=mir('strokeL')}pose=R.mixPose(a,b,smooth(s))}}
   // turning moment: mohawk
   const inTurn=(toBack&&lt>tBack&&lt<tBack+turnDur)||(sg.fromBack&&lt<Math.min(1.6,T*.3)&&lt>Math.min(1.6,T*.3)-turnDur);
   if(inTurn)pose=R.mixPose(pose,POSE.mohawk,.6);
-  // arm phrasing for musicality
-  const phrase=(Math.sin(t*.55)+1)/2;pose=R.mixPose(pose,POSE.openArms,phrase*.3*(1-backBlend));
+  // light arm phrasing only on the hand-built poses; tracked loops keep their own arms
+  if(!tracked){const phrase=(Math.sin(t*.55)+1)/2;pose=R.mixPose(pose,POSE.openArms,phrase*.2*(1-backBlend))}
   // ease out of a stationary start / into the final pose
   if(sg.fromStationary&&lt<1.2)pose=R.mixPose(POSE.openArms,pose,smooth(lt/1.2));
   if(sg.final&&u>.85)pose=R.mixPose(pose,POSE.glide,smooth((u-.85)/.15));
@@ -841,7 +872,7 @@ function frame(now){
     let want;
     if(state.cam==='judge')want=new THREE.Vector3(f.x*.15,2.3,21);
     else if(state.cam==='overhead')want=new THREE.Vector3(0,50,0);
-    else if(state.cam==='low')want=new THREE.Vector3(f.x+3.2,.5,f.z+5.2);
+    else if(state.cam==='low'){const r=Math.hypot(f.x,f.z);const d=r>4?{x:-f.x/r,z:-f.z/r}:{x:.52,z:.85};const side={x:-d.z,z:d.x};want=new THREE.Vector3(f.x+d.x*5.2+side.x*2.2,.6,f.z+d.z*5.2+side.z*2.2)}
     else if(state.cam==='free')want=new THREE.Vector3(camState.target.x+camState.radius*Math.sin(camState.phi)*Math.sin(camState.theta),camState.target.y+camState.radius*Math.cos(camState.phi),camState.target.z+camState.radius*Math.sin(camState.phi)*Math.cos(camState.theta));
     else{const zoom=state.replay?.62:1;const far=state.disc==='P'?1.25:1;want=new THREE.Vector3(f.x+2.6*zoom*far,2.4*zoom+.9,f.z+6.8*zoom*far)}
     camState.pos.lerp(want,state.cam==='free'?1:Math.min(1,state.playing?dt*3:1));
