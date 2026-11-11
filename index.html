@@ -644,10 +644,14 @@ function transTrack(sg,t,loc){
   // one continuous blend space: forward stroking <-> back crossovers by facing, curve direction by (signed, eased) curvature
   const kw=clamp(k/.035,-1,1);const w=Math.abs(kw);const clipTimeT=(t-sg.t0)*rate;
   let fwd,bk;
-  const strokeT=1.15/rate,bcT=1.3/rate; // seconds per cycle at this speed
+  const strokeT=1.25/rate,bcT=1.3/rate; // seconds per cycle at this speed (from tracked programs: 0.7-1.1 pushes/s)
+  // phrasing from the tracked programs: stroke in bursts of ~3-4 s, then ride an edge for ~2 s, then stroke again
+  const PH=5.6,phz=((lt+sg.t0*.37)%PH);const glideW=phz<3.6?0:phz<4.1?smooth((phz-3.6)/.5):phz<5.1?1:1-smooth((phz-5.1)/.5);
   fwd=cyclePose('stroke',(t-sg.t0)/strokeT);
+  if(glideW>0){const g=Object.assign({},KEY.glideL,{torso:[.1,kw*.35,kw*.1],head:[-.15,kw*.3,0],lArm:[.9,.05,.3],lFore:[.9,.1,.3],rArm:[-.9,-.25,.45],rFore:[-.9,-.2,.5]});
+    fwd=R.mixPose(fwd,kw<0?R.mirrorPose(g):g,glideW)}
   // on a curve: upper body turns into the circle; the stride itself stays the same
-  fwd.torso=[fwd.torso[0],fwd.torso[1]+kw*.32,fwd.torso[2]+kw*.06];fwd.head=[fwd.head[0],(fwd.head[1]||0)+kw*.28,fwd.head[2]];
+  fwd.torso=[fwd.torso[0],fwd.torso[1]+kw*.32*(1-glideW),fwd.torso[2]+kw*.06];fwd.head=[fwd.head[0],(fwd.head[1]||0)+kw*.28*(1-glideW),fwd.head[2]];
   const bR=cyclePose('bcross',(t-sg.t0)/bcT);bk=R.mixPose(R.mirrorPose(bR),bR,(kw+1)/2);
   let pose=R.mixPose(fwd,bk,smooth(backBlend));
   // turning moment: mohawk, eased in and out
@@ -658,7 +662,7 @@ function transTrack(sg,t,loc){
   if(sg.fromStationary&&lt<1.2)pose=R.mixPose(POSE.openArms,pose,smooth(lt/1.2));
   if(sg.final&&u>.85)pose=R.mixPose(pose,POSE.glide,smooth((u-.85)/.15));
   const curveNow=sg._curve?w>.35:w>.65;sg._curve=curveNow;
-  const label=back?(curveNow?'Back crossovers':'Back edges'):(curveNow?'Crossovers on the curve':'Stroking');
+  const label=back?(curveNow?'Back crossovers':'Back edges'):(glideW>.5?'Edge glide':(curveNow?'Crossovers on the curve':'Stroking'));
   return {pose,yaw:0,air:0,backBlend,label:inTurn?'Mohawk turn':label};
 }
 // per-skater sample: returns {pose,yaw,air,backBlend,roll,lift,offset}
