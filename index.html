@@ -983,6 +983,7 @@ async function loadMusic(f){
   // can the browser play it? (decoded audio can always be played; otherwise ask the <audio> element)
   let dur=ab?ab.duration:await new Promise(res=>{const a=document.createElement('audio');a.preload='metadata';a.onloadedmetadata=()=>res(a.duration);a.ondurationchange=()=>{if(isFinite(a.duration))res(a.duration)};a.onerror=()=>res(null);a.src=url;a.load();setTimeout(()=>res(isFinite(a.duration)?a.duration:null),25000)});
   if(!dur||!isFinite(dur)){const ext=(f.name.match(/\.[^.]+$/)||[''])[0].toLowerCase();URL.revokeObjectURL(url);
+    if(/could not be read|NotReadable|permission/i.test(decodeErr)){nameEl.textContent='The browser was not allowed to read "'+f.name+'" from its folder (it never saw the audio). On a Mac this usually means Chrome lacks access to your Desktop or Documents folder (System Settings → Privacy & Security → Files and Folders → Chrome), or the file is in iCloud and not downloaded yet. Quick fix: move the file into Downloads and upload it from there.';return}
     nameEl.textContent='Couldn\'t open "'+f.name+'" ('+(f.type||ext||'unknown type')+'). This browser can play MP3, M4A/AAC, WAV, FLAC and OGG; AIFF is converted automatically. Export the track as an MP3 or WAV and try again.'+(decodeErr?' Browser said: '+decodeErr:'');return}
   if(ch){const N=1200,step=Math.max(1,Math.floor(ch.length/N)),peaks=new Float32Array(N);
     for(let i=0;i<N;i++){let m=0;for(let j=0;j<step;j+=8){const v=Math.abs(ch[i*step+j]||0);if(v>m)m=v}peaks[i]=m}
