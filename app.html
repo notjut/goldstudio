@@ -944,19 +944,25 @@ drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.add('over
 drop.addEventListener('drop',e=>{e.preventDefault();drop.classList.remove('over');const f=e.dataTransfer.files&&e.dataTransfer.files[0];if(f)loadMusic(f)});
 musicInput.addEventListener('change',e=>{const f=e.target.files[0];if(f)loadMusic(f)});
 async function loadMusic(f){
-  document.getElementById('musicName').textContent='Decoding '+f.name+'…';
-  try{
-    const buf=await f.arrayBuffer();const ctx=new (window.AudioContext||window.webkitAudioContext)();const ab=await ctx.decodeAudioData(buf.slice(0));
-    const ch=ab.getChannelData(0),N=1200,step=Math.floor(ch.length/N),peaks=new Float32Array(N);
-    for(let i=0;i<N;i++){let m=0;for(let j=0;j<step;j+=8){const v=Math.abs(ch[i*step+j]);if(v>m)m=v}peaks[i]=m}
-    state.peaks=peaks;state.musicDur=ab.duration;state.trimStart=0;state.trimEnd=ab.duration;
-    const bpm=estimateTempo(ch,ab.sampleRate);state.bpm=bpm.bpm;state.beat0=bpm.offset;
-    audioEl.src=URL.createObjectURL(f);audioEl.volume=+document.getElementById('vol').value;state.audio=f;ctx.close&&ctx.close();
-    document.getElementById('mTrack').textContent=f.name+' · '+fmtS(ab.duration);
-    document.getElementById('mBpm').textContent=state.bpm?Math.round(state.bpm)+' BPM':'not detected';
-    const ts=document.getElementById('trimStart'),te=document.getElementById('trimEnd');ts.max=te.max=ab.duration.toFixed(1);ts.value=0;te.value=ab.duration.toFixed(1);
-    applyTrim();
-  }catch(err){document.getElementById('musicName').textContent='Could not decode that file. Try an MP3, M4A or WAV.'}
+  const nameEl=document.getElementById('musicName');nameEl.textContent='Decoding '+f.name+'…';
+  const url=URL.createObjectURL(f);
+  // 1. can the browser play it at all?
+  const dur=await new Promise(res=>{const a=document.createElement('audio');a.preload='metadata';a.onloadedmetadata=()=>res(a.duration);a.onerror=()=>res(null);a.src=url;setTimeout(()=>res(a.duration||null),8000)});
+  if(!dur||!isFinite(dur)){nameEl.textContent='This browser can\'t play "'+f.name+'" ('+(f.type||'unknown type')+'). Protected tracks from Apple Music or Spotify won\'t work; export an MP3, M4A or WAV of the song and try again.';URL.revokeObjectURL(url);return}
+  // 2. decode for the waveform and tempo; if that fails the track still plays, just without the waveform
+  let ab=null,ch=null;
+  try{const buf=await f.arrayBuffer();const ctx=new (window.AudioContext||window.webkitAudioContext)();ab=await ctx.decodeAudioData(buf.slice(0));ch=ab.getChannelData(0);ctx.close&&ctx.close()}catch(err){console.warn('decodeAudioData failed',err)}
+  const total=ab?ab.duration:dur;
+  if(ch){const N=1200,step=Math.max(1,Math.floor(ch.length/N)),peaks=new Float32Array(N);
+    for(let i=0;i<N;i++){let m=0;for(let j=0;j<step;j+=8){const v=Math.abs(ch[i*step+j]||0);if(v>m)m=v}peaks[i]=m}
+    state.peaks=peaks;try{const bpm=estimateTempo(ch,ab.sampleRate);state.bpm=bpm.bpm;state.beat0=bpm.offset}catch(e){state.bpm=0;state.beat0=0}}
+  else{state.peaks=null;state.bpm=0;state.beat0=0}
+  state.musicDur=total;state.trimStart=0;state.trimEnd=total;
+  audioEl.src=url;audioEl.volume=+document.getElementById('vol').value;state.audio=f;
+  document.getElementById('mTrack').textContent=f.name+' · '+fmtS(total);
+  document.getElementById('mBpm').textContent=state.bpm?Math.round(state.bpm)+' BPM':(ch?'not detected':'— (no waveform for this format)');
+  const ts=document.getElementById('trimStart'),te=document.getElementById('trimEnd');ts.max=te.max=total.toFixed(1);ts.value=0;te.value=total.toFixed(1);
+  try{applyTrim()}catch(err){console.warn(err);nameEl.textContent=f.name+' loaded, but the timeline could not be rebuilt: '+err.message}
 }
 function applyTrim(){
   const ts=document.getElementById('trimStart'),te=document.getElementById('trimEnd');
