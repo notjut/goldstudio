@@ -185,7 +185,6 @@ input[type="range"]{width:100%;accent-color:var(--accent)}
       <select id="rate" aria-label="Playback speed" style="width:auto">
         <option value="1">1× speed</option><option value="0.5">½ slow motion</option><option value="0.25">¼ slow motion</option>
       </select>
-      <label class="toggle"><input type="checkbox" id="autoReplay" checked> Slow-motion replay on jumps</label>
       <button class="btn" id="rec" hidden>● Record video</button>
       <span class="spacer"></span>
       <button class="btn" id="musicBtn">♪ Upload music</button>
@@ -387,7 +386,7 @@ const CODE_LISTS={
 /* ---------- Program state ---------- */
 const LEN={SP:{senior:160,junior:160,novice:140},FS:{senior:240,junior:210,novice:180}};
 const state={disc:'W',level:'senior',seg:'SP',duration:160,elements:[],time:0,playing:false,rate:1,cam:'broadcast',
-  audio:null,peaks:null,musicDur:0,trimStart:0,trimEnd:0,bpm:0,beat0:0,replay:null,replayOn:true,snap:false,ready:false};
+  audio:null,peaks:null,musicDur:0,trimStart:0,trimEnd:0,bpm:0,beat0:0,replay:null,replayOn:false,snap:false,ready:false};
 let uid=1;
 const mk=(t,code,x,z,extra)=>({id:uid++,t,code,x,z,extra:!!extra});
 const SAMPLES={
@@ -843,7 +842,6 @@ function pause(){state.playing=false;if(state.audio)audioEl.pause();setPlayIcon(
 document.getElementById('play').addEventListener('click',()=>state.playing?pause():play());
 document.getElementById('stop').addEventListener('click',()=>{pause();seek(0);state.replay=null});
 document.getElementById('rate').addEventListener('change',e=>{state.rate=+e.target.value;audioEl.playbackRate=state.rate});
-document.getElementById('autoReplay').addEventListener('change',e=>state.replayOn=e.target.checked);
 document.getElementById('vol').addEventListener('input',e=>audioEl.volume=+e.target.value);
 let lastFrame=performance.now();
 function advance(dt){
@@ -853,8 +851,6 @@ function advance(dt){
     return}
   if(state.audio){state.time=clamp(audioEl.currentTime-state.trimStart,0,state.duration);if(audioEl.ended||state.time>=state.duration){state.time=state.duration;pause()}}
   else{state.time+=dt*state.rate;if(state.time>=state.duration){state.time=state.duration;pause()}}
-  // trigger replay after a jump lands
-  if(state.replayOn&&state.rate===1){for(const it of TL.items){const k=it.info.kind;if(k!=='jump'&&k!=='throw'&&k!=='twist')continue;if(!it._rep&&state.time>=it.t1&&state.time<it.t1+.3){it._rep=true;state.replay={t:it.t0-.3,t0:it.t0-.3,t1:it.t1+.2,item:it};if(state.audio)audioEl.muted=true;break}}}
 }
 function resetReplays(){for(const it of TL.items)it._rep=state.time>it.t1}
 
