@@ -3,16 +3,16 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<meta name="description" content="Bladework: build a figure skating program element by element, sync it to music, and watch a 3D skater perform it.">
+<meta name="description" content="BLADEWRX: build a figure skating program element by element, sync it to music, and watch a 3D skater perform it.">
 <meta name="theme-color" content="#0a1e3d">
 <style>html,body{height:100%}body{margin:0}[hidden]{display:none!important}img{max-width:100%}</style>
 <script>window.GS_SITE=true;</script>
 </head>
 <body>
-<title>Bladework</title>
+<title>BLADEWRX</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@1,700;1,800;1,900&family=Barlow:wght@400;500;600;700&display=swap">
 <style>
-/* Layout: arena-side console. 3D rink on top, transport strip, then tabbed program sheet. Brand: navy field, electric chrome-blue accents, wide italic display type to match the Bladework logo. */
+/* Layout: arena-side console. 3D rink on top, transport strip, then tabbed program sheet. Brand: navy field, electric chrome-blue accents, wide italic display type to match the BLADEWRX logo. */
 :root{
   --bg:#0a1e3d; --panel:#102a52; --panel-2:#163566; --line:#27497e; --fg:#eef3fb; --muted:#9db1d1;
   --accent:#2f8dff; --accent-ink:#06162e; --ice:#bfd9ee; --ok:#5ed29a; --warn:#e8bb55; --bad:#f07373;
@@ -156,7 +156,7 @@ input[type="range"]{width:100%;accent-color:var(--accent)}
 <div class="wrap">
   <header>
     <div class="brand">
-      <h1><img src="brand/logo-960.webp" alt="Bladework" width="960" height="320"></h1>
+      <h1><img src="brand/logo-960.webp" alt="BLADEWRX" width="960" height="345"></h1>
       <div class="sub" id="progName">Senior Women · Short Program · 2:40</div>
     </div>
     <div class="setup">
@@ -1199,7 +1199,7 @@ document.querySelectorAll('.tab').forEach(b=>b.addEventListener('click',()=>{doc
     try{if(state.audio&&audioEl.captureStream){audioEl.captureStream().getAudioTracks().forEach(t=>stream.addTrack(t))}}catch(e){}
     chunks=[];rec=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:8e6}:undefined);
     rec.ondataavailable=e=>{if(e.data.size)chunks.push(e.data)};
-    rec.onstop=()=>{const ext=(rec.mimeType||mime).includes('mp4')?'mp4':'webm';const blob=new Blob(chunks,{type:rec.mimeType||mime});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bladework-program.'+ext;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);rec=null;btn.textContent='● Record video';btn.classList.remove('primary')};
+    rec.onstop=()=>{const ext=(rec.mimeType||mime).includes('mp4')?'mp4':'webm';const blob=new Blob(chunks,{type:rec.mimeType||mime});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='bladewrx-program.'+ext;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},2000);rec=null;btn.textContent='● Record video';btn.classList.remove('primary')};
     seek(0);resetReplays();play();rec.start(500);btn.textContent='■ Stop & save';btn.classList.add('primary');
     const watch=()=>{if(!rec)return;if(!state.playing){rec.stop();return}requestAnimationFrame(watch)};requestAnimationFrame(watch);
   });
